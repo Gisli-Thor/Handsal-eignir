@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
@@ -43,17 +43,18 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.0",
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.23",
+    "pg": "^8.23.0",
     "prisma": "^7.9.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "typescript": "^5",
-    "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.11"
   }
 }

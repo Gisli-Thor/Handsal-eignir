@@ -1,0 +1,1 @@
+Adapter interfaces (ports) for external integrations. Concrete mock implementations live in src/adapters/*; wiring happens in the service registry in src/lib (configured via ADAPTER_* env vars). Core code depends only on these interfaces.

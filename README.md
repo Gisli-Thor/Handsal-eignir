@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Handsal
 
-## Getting Started
+Multi-tenant SaaS for Icelandic sales professionals — one shared core, two branded verticals:
 
-First, run the development server:
+- **Handsal Eignir** — real estate agencies (fasteignasölur)
+- **Handsal Bílar** — used car dealerships (bílasölur, scaffold)
 
-```bash
+*Handsal*: sealing a deal with a handshake. The product takes a listing from intake to a closed, signed deal.
+
+See `SPEC.md` for the full product specification, `ARCHITECTURE.md` for the technical overview, and `PROGRESS.md` for milestone status.
+
+## Setup (Windows)
+
+Prerequisites:
+
+- **Node 20+** (`node --version`)
+- **Docker Desktop** (for Postgres, MinIO and Mailpit)
+
+```powershell
+# 1. Install dependencies
+npm install
+
+# 2. Environment
+copy .env.example .env
+# then set AUTH_SECRET to a random value:  npx auth secret
+
+# 3. Start infrastructure (Postgres :5432, MinIO :9000/:9001, Mailpit :1025/:8025)
+npm run db:up
+
+# 4. Apply migrations and generate the Prisma client
+npm run db:migrate
+
+# 5. Seed demo data
+npm run seed
+
+# 6. Run
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The same commands work on macOS/Linux (`cp` instead of `copy`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Web UIs
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Service        | URL                    |
+| -------------- | ---------------------- |
+| App            | http://localhost:3000  |
+| Mailpit (mail) | http://localhost:8025  |
+| MinIO console  | http://localhost:9001  |
 
-## Learn More
+## Demo logins
 
-To learn more about Next.js, take a look at the following resources:
+Password for all seeded users: **`handsal-demo1`**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Role       | Email                  | Tenant                       |
+| ---------- | ---------------------- | ---------------------------- |
+| SUPERADMIN | superadmin@handsal.is  | — (platform `/admin`)        |
+| ADMIN      | anna@demo.is           | Demo fasteignasala (Eignir)  |
+| AGENT      | jon@demo.is            | Demo fasteignasala (Eignir)  |
+| ADMIN      | bjarni@bilar.is        | Demo bílasala (Bílar)        |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+| Command                    | What it does                                    |
+| -------------------------- | ----------------------------------------------- |
+| `npm run dev`              | Dev server (Turbopack)                          |
+| `npm run build` / `start`  | Production build / serve                        |
+| `npm run typecheck`        | `tsc --noEmit`                                  |
+| `npm run lint`             | ESLint (includes core-boundary import rules)    |
+| `npm run test`             | Unit tests (no database needed)                 |
+| `npm run test:integration` | Integration tests — needs Postgres running; creates and migrates `handsal_test` automatically |
+| `npm run db:up` / `db:down`| Start / stop Docker services                    |
+| `npm run db:migrate`       | `prisma migrate dev`                            |
+| `npm run db:studio`        | Prisma Studio                                   |
+| `npm run seed`             | Seed demo data (idempotent)                     |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Environment variables
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Documented inline in `.env.example`. Secrets are only ever provided via env — never committed.
+
+## Demo flows
+
+- **Sign in / theming** — log in as `anna@demo.is` (Eignir theme, copper accent) vs `bjarni@bilar.is` (Bílar theme, steel-blue accent). Language switch (Íslenska/English) is in the avatar menu, top right.
+- **Platform admin** — log in as `superadmin@handsal.is`: manage tenants and plans under `/admin`, create a tenant, assign a plan, create its first ADMIN user, and inspect the platform audit log.
+- *(M2+)* Contacts with Þjóðskrá lookup, properties and media, pipeline, offers/fyrirvarar, portal publishing, söluyfirlit, e-signing simulator (`/dev/signing`), commissions and dashboard — added milestone by milestone; this section grows with each.
+
+## Production
+
+`Dockerfile` builds a cloud-agnostic standalone image (EU hosting). Run database migrations at deploy time with `npx prisma migrate deploy`. All required env vars are listed in `.env.example`.
+
+## GDPR & data retention (placeholder)
+
+Per-tenant data export, contact anonymization (right to erasure) and document retention notes are implemented/documented from M2 onward as the relevant data models land. The audit log is append-only by design.
