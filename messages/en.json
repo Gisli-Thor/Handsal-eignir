@@ -24,7 +24,9 @@
     "notFound": "Not found",
     "errorOccurred": "Something went wrong. Please try again.",
     "perMonth": "per month",
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "yes": "Yes",
+    "no": "No"
   },
   "locale": {
     "label": "Language",
@@ -130,6 +132,157 @@
       "kennitalaTaken": "A contact with this kennitala already exists.",
       "invalidKennitala": "The kennitala is invalid.",
       "inUse": "A contact linked to a listing cannot be deleted."
+    }
+  },
+  "listings": {
+    "title": "Properties",
+    "new": "New property",
+    "delete": "Delete",
+    "savedToast": "Property saved.",
+    "searchPlaceholder": "Search by street, fastanúmer or postal code…",
+    "empty": "No properties yet. Register your first property.",
+    "emptySearch": "No properties found.",
+    "untitled": "Untitled listing",
+    "noPrice": "No asking price",
+    "deleteConfirmTitle": "Delete property?",
+    "deleteConfirmBody": "“{address}” and all its photos, documents and links will be permanently deleted. This cannot be undone.",
+    "editTitle": "Edit — {address}",
+    "stage": {
+      "UNDIRBUNINGUR": "Undirbúningur (intake)",
+      "I_SOLU": "Í sölu (listed)",
+      "TILBOD_MOTTEKID": "Tilboð móttekið (offer received)",
+      "TILBOD_SAMTHYKKT": "Tilboð samþykkt (offer accepted)",
+      "KAUPSAMNINGUR": "Kaupsamningur (purchase agreement)",
+      "AFHENDING": "Afhending (handover)",
+      "AFSAL_LOKID": "Afsal / Lokið (deed / closed)",
+      "FALLID_FRA": "Fallið frá (withdrawn)"
+    },
+    "propertyType": {
+      "FJOLBYLI": "Fjölbýli (apartment building)",
+      "EINBYLI": "Einbýli (detached house)",
+      "RADHUS": "Raðhús (terraced house)",
+      "PARHUS": "Parhús (semi-detached)",
+      "HAED": "Hæð/sérhæð (floor unit)",
+      "ATVINNUHUSNAEDI": "Atvinnuhúsnæði (commercial)",
+      "SUMARHUS": "Sumarhús (summer house)",
+      "LOD": "Lóð (plot)",
+      "ANNAD": "Other"
+    },
+    "parkingType": {
+      "NONE": "None",
+      "BILSKUR": "Bílskúr (garage)",
+      "BILSKYLI": "Bílskýli (carport)",
+      "STAEDI": "Parking space",
+      "STAEDI_I_BILAHUSI": "Space in parking garage"
+    },
+    "sections": {
+      "address": "Location",
+      "identifiers": "Identifiers",
+      "size": "Size and rooms",
+      "building": "Building",
+      "valuation": "Price and valuations",
+      "description": "Description",
+      "facts": "Property details",
+      "media": "Photos and floor plans",
+      "documents": "Documents",
+      "parties": "Parties",
+      "agents": "Agents",
+      "loans": "Áhvílandi lán (encumbrances)"
+    },
+    "fields": {
+      "gotuheiti": "Street",
+      "husnumer": "Number",
+      "ibud": "Apartment / unit",
+      "postnumer": "Postal code",
+      "postnumerPlaceholder": "Select postal code",
+      "tegund": "Property type",
+      "fastanumer": "Fastanúmer (property ID)",
+      "landeignarnumer": "Landeignarnúmer (land ID)",
+      "birtStaerd": "Birt stærð (registered size, m²)",
+      "tharAfGeymsla": "Of which storage (m²)",
+      "herbergi": "Rooms",
+      "svefnherbergi": "Bedrooms",
+      "badherbergi": "Bathrooms",
+      "haed": "Floor",
+      "byggingarar": "Year built",
+      "lyfta": "Elevator",
+      "parkingType": "Garage / parking",
+      "parkingCount": "Number of spaces",
+      "askingPriceISK": "Ásett verð (asking price, ISK)",
+      "fasteignamatISK": "Fasteignamat (property valuation, ISK)",
+      "brunabotamatISK": "Brunabótamat (fire insurance valuation, ISK)",
+      "descriptionIs": "Description (Icelandic)",
+      "descriptionEn": "Description (English)",
+      "athugasemdir": "Notes / condition",
+      "sveitarfelag": "Municipality"
+    },
+    "media": {
+      "upload": "Upload photos",
+      "uploading": "Uploading ({count})",
+      "uploadHint": "JPG, PNG or WebP, max 25 MB",
+      "uploadedToast": "Photos uploaded.",
+      "uploadFailed": "{filename}: {reason}",
+      "empty": "No photos yet.",
+      "cover": "Cover",
+      "setCover": "Set as cover",
+      "category": {
+        "PHOTO": "Photo",
+        "FLOOR_PLAN": "Floor plan",
+        "DOCUMENT_SCAN": "Document scan"
+      },
+      "errors": {
+        "unsupportedType": "Unsupported file type",
+        "tooLarge": "File is too large (max 25 MB)"
+      }
+    },
+    "documents": {
+      "file": "File",
+      "type": "Type",
+      "docTitle": "Title",
+      "date": "Document date",
+      "upload": "Upload",
+      "uploadedToast": "Document uploaded.",
+      "empty": "No documents yet.",
+      "download": "Download",
+      "delete": "Delete",
+      "types": {
+        "EIGNASKIPTAYFIRLYSING": "Eignaskiptayfirlýsing (division declaration)",
+        "SKILALYSING": "Skilalýsing (delivery description)",
+        "VEDBANDAYFIRLIT": "Veðbandayfirlit (encumbrance certificate)",
+        "ANNAD": "Other"
+      },
+      "errors": {
+        "unsupportedType": "Unsupported file type (PDF or image)",
+        "tooLarge": "File is too large (max 50 MB)"
+      }
+    },
+    "parties": {
+      "selectContact": "Select contact",
+      "add": "Add",
+      "remove": "Remove",
+      "empty": "No parties linked yet."
+    },
+    "agents": {
+      "selectUser": "Select user",
+      "add": "Add",
+      "remove": "Remove",
+      "empty": "No agents assigned.",
+      "primary": "Primary"
+    },
+    "loans": {
+      "lender": "Lender",
+      "remainingBalance": "Remaining balance (ISK)",
+      "interestRate": "Interest (%)",
+      "terms": "Terms",
+      "verdtryggt": "Verðtryggt (indexed)",
+      "overdtryggt": "Óverðtryggt (non-indexed)",
+      "yfirtakanlegt": "Yfirtakanlegt (assumable)",
+      "add": "Add loan",
+      "remove": "Remove",
+      "empty": "No encumbrances registered.",
+      "errors": {
+        "invalid": "Check the input — lender and remaining balance are required."
+      }
     }
   },
   "admin": {

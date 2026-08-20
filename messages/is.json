@@ -24,7 +24,9 @@
     "notFound": "Fannst ekki",
     "errorOccurred": "Villa kom upp. Reyndu aftur.",
     "perMonth": "á mánuði",
-    "comingSoon": "Væntanlegt"
+    "comingSoon": "Væntanlegt",
+    "yes": "Já",
+    "no": "Nei"
   },
   "locale": {
     "label": "Tungumál",
@@ -130,6 +132,157 @@
       "kennitalaTaken": "Tengiliður með þessa kennitölu er þegar til.",
       "invalidKennitala": "Kennitalan er ógild.",
       "inUse": "Ekki er hægt að eyða tengilið sem er tengdur skráningu."
+    }
+  },
+  "listings": {
+    "title": "Eignir",
+    "new": "Ný eign",
+    "delete": "Eyða",
+    "savedToast": "Eign vistuð.",
+    "searchPlaceholder": "Leita eftir götu, fastanúmeri eða póstnúmeri…",
+    "empty": "Engar eignir ennþá. Skráðu fyrstu eignina.",
+    "emptySearch": "Engar eignir fundust.",
+    "untitled": "Ónefnd skráning",
+    "noPrice": "Verð óskráð",
+    "deleteConfirmTitle": "Eyða eign?",
+    "deleteConfirmBody": "„{address}“ og öllum myndum, skjölum og tengingum verður eytt varanlega. Þessa aðgerð er ekki hægt að afturkalla.",
+    "editTitle": "Breyta — {address}",
+    "stage": {
+      "UNDIRBUNINGUR": "Undirbúningur",
+      "I_SOLU": "Í sölu",
+      "TILBOD_MOTTEKID": "Tilboð móttekið",
+      "TILBOD_SAMTHYKKT": "Tilboð samþykkt",
+      "KAUPSAMNINGUR": "Kaupsamningur",
+      "AFHENDING": "Afhending",
+      "AFSAL_LOKID": "Afsal / Lokið",
+      "FALLID_FRA": "Fallið frá"
+    },
+    "propertyType": {
+      "FJOLBYLI": "Fjölbýli",
+      "EINBYLI": "Einbýli",
+      "RADHUS": "Raðhús",
+      "PARHUS": "Parhús",
+      "HAED": "Hæð/sérhæð",
+      "ATVINNUHUSNAEDI": "Atvinnuhúsnæði",
+      "SUMARHUS": "Sumarhús",
+      "LOD": "Lóð",
+      "ANNAD": "Annað"
+    },
+    "parkingType": {
+      "NONE": "Ekkert",
+      "BILSKUR": "Bílskúr",
+      "BILSKYLI": "Bílskýli",
+      "STAEDI": "Bílastæði",
+      "STAEDI_I_BILAHUSI": "Stæði í bílahúsi"
+    },
+    "sections": {
+      "address": "Staðsetning",
+      "identifiers": "Auðkenni",
+      "size": "Stærð og herbergi",
+      "building": "Bygging",
+      "valuation": "Verð og mat",
+      "description": "Lýsing",
+      "facts": "Upplýsingar um eign",
+      "media": "Myndir og teikningar",
+      "documents": "Skjöl",
+      "parties": "Aðilar",
+      "agents": "Sölumenn",
+      "loans": "Áhvílandi lán"
+    },
+    "fields": {
+      "gotuheiti": "Götuheiti",
+      "husnumer": "Húsnúmer",
+      "ibud": "Íbúð/merking",
+      "postnumer": "Póstnúmer",
+      "postnumerPlaceholder": "Veldu póstnúmer",
+      "tegund": "Tegund eignar",
+      "fastanumer": "Fastanúmer",
+      "landeignarnumer": "Landeignarnúmer",
+      "birtStaerd": "Birt stærð (m²)",
+      "tharAfGeymsla": "Þar af geymsla (m²)",
+      "herbergi": "Herbergi",
+      "svefnherbergi": "Svefnherbergi",
+      "badherbergi": "Baðherbergi",
+      "haed": "Hæð",
+      "byggingarar": "Byggingarár",
+      "lyfta": "Lyfta",
+      "parkingType": "Bílskúr/bílastæði",
+      "parkingCount": "Fjöldi stæða",
+      "askingPriceISK": "Ásett verð (kr.)",
+      "fasteignamatISK": "Fasteignamat (kr.)",
+      "brunabotamatISK": "Brunabótamat (kr.)",
+      "descriptionIs": "Lýsing (íslenska)",
+      "descriptionEn": "Lýsing (enska)",
+      "athugasemdir": "Athugasemdir / ástand",
+      "sveitarfelag": "Sveitarfélag"
+    },
+    "media": {
+      "upload": "Hlaða upp myndum",
+      "uploading": "Hleð upp ({count})",
+      "uploadHint": "JPG, PNG eða WebP, hámark 25 MB",
+      "uploadedToast": "Myndum hlaðið upp.",
+      "uploadFailed": "{filename}: {reason}",
+      "empty": "Engar myndir ennþá.",
+      "cover": "Forsíðumynd",
+      "setCover": "Gera að forsíðumynd",
+      "category": {
+        "PHOTO": "Ljósmynd",
+        "FLOOR_PLAN": "Teikning",
+        "DOCUMENT_SCAN": "Skannað skjal"
+      },
+      "errors": {
+        "unsupportedType": "Óstudd skráartegund",
+        "tooLarge": "Skráin er of stór (hámark 25 MB)"
+      }
+    },
+    "documents": {
+      "file": "Skjal",
+      "type": "Tegund",
+      "docTitle": "Heiti",
+      "date": "Dagsetning skjals",
+      "upload": "Hlaða upp",
+      "uploadedToast": "Skjali hlaðið upp.",
+      "empty": "Engin skjöl ennþá.",
+      "download": "Sækja",
+      "delete": "Eyða",
+      "types": {
+        "EIGNASKIPTAYFIRLYSING": "Eignaskiptayfirlýsing",
+        "SKILALYSING": "Skilalýsing",
+        "VEDBANDAYFIRLIT": "Veðbandayfirlit",
+        "ANNAD": "Annað"
+      },
+      "errors": {
+        "unsupportedType": "Óstudd skráartegund (PDF eða mynd)",
+        "tooLarge": "Skráin er of stór (hámark 50 MB)"
+      }
+    },
+    "parties": {
+      "selectContact": "Veldu tengilið",
+      "add": "Bæta við",
+      "remove": "Fjarlægja",
+      "empty": "Engir aðilar tengdir ennþá."
+    },
+    "agents": {
+      "selectUser": "Veldu notanda",
+      "add": "Bæta við",
+      "remove": "Fjarlægja",
+      "empty": "Engir sölumenn skráðir.",
+      "primary": "Aðalábyrgð"
+    },
+    "loans": {
+      "lender": "Lánveitandi",
+      "remainingBalance": "Eftirstöðvar (kr.)",
+      "interestRate": "Vextir (%)",
+      "terms": "Skilmálar",
+      "verdtryggt": "Verðtryggt",
+      "overdtryggt": "Óverðtryggt",
+      "yfirtakanlegt": "Yfirtakanlegt",
+      "add": "Bæta við láni",
+      "remove": "Fjarlægja",
+      "empty": "Engin áhvílandi lán skráð.",
+      "errors": {
+        "invalid": "Athugaðu innslátt — lánveitandi og eftirstöðvar eru nauðsynleg."
+      }
     }
   },
   "admin": {

@@ -51,7 +51,50 @@ Open questions / follow-ups:
 5. Optionally verify login flows manually at http://localhost:3000
 6. Mark this stop point resolved here, then **begin M2 — Contacts & properties**
 
-## M2 — Contacts & properties ☐
+## M2 — Contacts & properties ⏳ (in progress, 2026-08-20)
+
+Note: M1's DB verification (migrate/seed/integration tests) is still pending —
+Docker needs the WSL optional component (`wsl --install --no-distribution` in
+an **admin** PowerShell + reboot; SVM is now enabled in BIOS). M2 code work
+continues meanwhile; everything below is verified by typecheck/lint/unit tests.
+
+Completed:
+
+- [x] Kennitala validation (checksum, day/month/century, person vs company) + 22 unit tests (`src/core/contacts/kennitala.ts`)
+- [x] `ThjodskraAdapter` port (`src/core/ports/registry.ts`) + mock (`src/adapters/registry/thjodskra.mock.ts`): documented test kennitölur, deterministic generated fakes for unknown valid kt, simulated latency + outage kt; service registry `src/lib/services.ts` selects impl via `ADAPTER_THJODSKRA`
+- [x] Prisma schema M2: `Contact`, `Listing` (core base), `ListingAgent`, `ListingContact`, `Property`, `EncumbranceLoan`, `MediaAsset`, `ListingDocument`, `PostalCode` + enums; offline migration `20260820120000_m2_contacts_properties_media`; scoped-model registry extended
+- [x] Composite tenant-safe FKs: child rows reference `(tenantId, id)` of Listing/Contact/User, so cross-tenant links are impossible at the DB level; new integration suite `tests/integration/m2-domain-isolation.test.ts`
+- [x] Contacts CRUD: list/search, create/edit/delete (delete blocked while linked), Þjóðskrá autofill with every lookup audited (kennitala + purpose + result), per-tenant kennitala uniqueness, is/en catalogs, nav unlocked
+
+In flight (code written, not yet committed):
+
+- [ ] Storage lib (`src/lib/storage.ts`): presigned PUT/GET, MinIO/S3 via env
+- [ ] Media pipeline: sharp derivatives (web 1600px / thumb 480px JPEG), upload request/confirm/delete/reorder/cover/category server actions; document upload actions (typed + dated)
+- [ ] Listing server actions (create/update/delete + contact links + agents + áhvílandi lán), property form, media manager UI
+
+Remaining for M2:
+
+- [ ] Listing pages (list, new, detail, edit) + documents/sellers/agents/loans panels
+- [ ] Listings i18n (is/en)
+- [ ] Postal code/municipality seed data + M2 seed extension (contacts + ~12 properties)
+- [ ] Typecheck/lint/tests green, docs updated, commits
+
+Decisions (M2 so far):
+
+1. **Composite FKs for tenant safety**: every child/join table FK includes `tenantId` → DB-level guarantee against cross-tenant references (defense in depth on top of the scoped client).
+2. **Listing RBAC**: all tenant users view all listings; ADMIN manages all, AGENT manages listings they are assigned to; creator becomes primary agent.
+3. **ISK amounts as BigInt** (commercial properties exceed int4); areas as Decimal(7,1); tsconfig target → ES2022 for bigint literals.
+4. **PostalCode is global reference data** (no tenantId), read via `unscopedDb`; deliberately not in the scoped-model registry.
+5. **MediaAsset = images only** (jpeg/png/webp, derivatives always generated); PDFs and other files go to `ListingDocument`. Derivatives are JPEG (not WebP) because the söluyfirlit PDF renderer (M4) takes JPEG/PNG.
+6. **Áhvílandi lán on Listing** (not Property) so the Bílar vertical reuses the same structure (SPEC §5 "same structure").
+7. **Storage keys embed tenant**: `tenants/{tenantId}/listings/{listingId}/…`, always derived server-side; browser never controls keys. Signed GET URLs generated per render, plain `<img>` (next/image would cache expired signed URLs).
+
+## Next steps (if session is interrupted)
+
+1. Finish listing UI: documents-panel, contacts-panel, agents-panel, loans-panel, pages (list/new/[id]/edit) — media-manager.tsx is done
+2. Listings i18n section in `messages/is.json` + `en.json`
+3. Postal codes seed + M2 seed data; commit remaining steps
+4. When Docker works: `npm run db:up && npm run db:migrate && npm run seed && npm run test:integration` (verifies M1 + M2 DB layers)
 
 ## M3 — Pipeline, offers, fyrirvarar ☐
 
