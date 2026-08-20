@@ -17,6 +17,21 @@ export const AUDIT_ACTIONS = [
   // Users
   "USER_CREATED",
   "USER_UPDATED",
+  // Registry lookups (SPEC §4 — compliance requirement, always awaited)
+  "THJODSKRA_LOOKUP",
+  // Contacts
+  "CONTACT_CREATED",
+  "CONTACT_UPDATED",
+  "CONTACT_DELETED",
+  // Listings & properties
+  "LISTING_CREATED",
+  "LISTING_UPDATED",
+  "LISTING_DELETED",
+  // Media & documents
+  "MEDIA_UPLOADED",
+  "MEDIA_DELETED",
+  "DOCUMENT_UPLOADED",
+  "DOCUMENT_DELETED",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
