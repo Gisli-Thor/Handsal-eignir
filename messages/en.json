@@ -1,0 +1,148 @@
+{
+  "common": {
+    "appName": "Handsal",
+    "verticalName": {
+      "EIGNIR": "Handsal Eignir",
+      "BILAR": "Handsal Bílar"
+    },
+    "verticalLabel": {
+      "EIGNIR": "Real estate",
+      "BILAR": "Cars"
+    },
+    "save": "Save",
+    "cancel": "Cancel",
+    "create": "Create",
+    "edit": "Edit",
+    "back": "Back",
+    "actions": "Actions",
+    "status": "Status",
+    "active": "Active",
+    "suspended": "Suspended",
+    "unlimited": "Unlimited",
+    "loading": "Loading...",
+    "noResults": "No results",
+    "notFound": "Not found",
+    "errorOccurred": "Something went wrong. Please try again.",
+    "perMonth": "per month",
+    "comingSoon": "Coming soon"
+  },
+  "locale": {
+    "label": "Language",
+    "is": "Íslenska",
+    "en": "English"
+  },
+  "auth": {
+    "title": "Sign in",
+    "subtitle": "Sign in to Handsal",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "signOut": "Sign out",
+    "errors": {
+      "invalidCredentials": "Wrong email or password.",
+      "rateLimited": "Too many sign-in attempts. Please try again shortly.",
+      "invalidInput": "Email and password are required."
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "eignir": {
+      "listings": "Properties",
+      "contacts": "Contacts",
+      "offers": "Offers (tilboð)",
+      "reports": "Reports"
+    },
+    "bilar": {
+      "listings": "Cars",
+      "contacts": "Contacts",
+      "offers": "Offers (tilboð)",
+      "reports": "Reports"
+    },
+    "openMenu": "Open menu",
+    "userMenu": "User menu"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome to {vertical}",
+    "emptyTitle": "Nothing here yet",
+    "emptyBody": "The dashboard fills up with your pipeline, offers and tasks once the first listings are registered."
+  },
+  "settings": {
+    "title": "Settings",
+    "tenantInfo": "Company information",
+    "name": "Name",
+    "vertical": "Vertical",
+    "plan": "Plan",
+    "usersTitle": "Users",
+    "roles": {
+      "ADMIN": "Administrator",
+      "AGENT": "Agent",
+      "SUPERADMIN": "Superadmin"
+    }
+  },
+  "admin": {
+    "title": "Handsal admin",
+    "subtitle": "Platform administration",
+    "nav": {
+      "tenants": "Tenants",
+      "plans": "Plans",
+      "audit": "Audit log"
+    },
+    "tenants": {
+      "title": "Tenants",
+      "new": "New tenant",
+      "edit": "Edit tenant",
+      "name": "Name",
+      "slug": "Slug",
+      "vertical": "Vertical",
+      "plan": "Plan",
+      "status": "Status",
+      "users": "Users",
+      "created": "Created",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
+      "brandColor": "Brand color",
+      "logoUrl": "Logo URL",
+      "createdToast": "Tenant created.",
+      "updatedToast": "Tenant updated.",
+      "errors": {
+        "slugTaken": "This slug is already in use.",
+        "invalidSlug": "Slug may only contain lowercase letters, digits and hyphens."
+      },
+      "usersSection": "Tenant users",
+      "noUsers": "No users yet.",
+      "addAdmin": "Create admin user",
+      "adminName": "Name",
+      "adminEmail": "Email",
+      "tempPassword": "Temporary password",
+      "adminCreatedToast": "Admin user created.",
+      "emailTaken": "This email is already in use."
+    },
+    "plans": {
+      "title": "Plans",
+      "new": "New plan",
+      "edit": "Edit plan",
+      "name": "Name",
+      "maxActiveListings": "Max active listings",
+      "maxActiveListingsHint": "Empty = unlimited",
+      "monthlyPrice": "Monthly price",
+      "tenants": "Tenants",
+      "createdToast": "Plan created.",
+      "updatedToast": "Plan updated.",
+      "errors": {
+        "nameTaken": "A plan with this name already exists."
+      }
+    },
+    "audit": {
+      "title": "Audit log",
+      "subtitle": "Platform-level events",
+      "when": "Time",
+      "action": "Action",
+      "actor": "User",
+      "target": "Target",
+      "empty": "No entries yet."
+    }
+  }
+}

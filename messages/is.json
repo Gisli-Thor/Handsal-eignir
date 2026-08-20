@@ -1,0 +1,148 @@
+{
+  "common": {
+    "appName": "Handsal",
+    "verticalName": {
+      "EIGNIR": "Handsal Eignir",
+      "BILAR": "Handsal Bílar"
+    },
+    "verticalLabel": {
+      "EIGNIR": "Fasteignir",
+      "BILAR": "Bílar"
+    },
+    "save": "Vista",
+    "cancel": "Hætta við",
+    "create": "Stofna",
+    "edit": "Breyta",
+    "back": "Til baka",
+    "actions": "Aðgerðir",
+    "status": "Staða",
+    "active": "Virkt",
+    "suspended": "Í bið",
+    "unlimited": "Ótakmarkað",
+    "loading": "Hleð...",
+    "noResults": "Engar niðurstöður",
+    "notFound": "Fannst ekki",
+    "errorOccurred": "Villa kom upp. Reyndu aftur.",
+    "perMonth": "á mánuði",
+    "comingSoon": "Væntanlegt"
+  },
+  "locale": {
+    "label": "Tungumál",
+    "is": "Íslenska",
+    "en": "English"
+  },
+  "auth": {
+    "title": "Innskráning",
+    "subtitle": "Skráðu þig inn á Handsal",
+    "email": "Netfang",
+    "password": "Lykilorð",
+    "submit": "Skrá inn",
+    "signOut": "Skrá út",
+    "errors": {
+      "invalidCredentials": "Rangt netfang eða lykilorð.",
+      "rateLimited": "Of margar innskráningartilraunir. Reyndu aftur eftir smá stund.",
+      "invalidInput": "Netfang og lykilorð þarf að fylla út."
+    }
+  },
+  "nav": {
+    "dashboard": "Yfirlit",
+    "settings": "Stillingar",
+    "eignir": {
+      "listings": "Eignir",
+      "contacts": "Tengiliðir",
+      "offers": "Tilboð",
+      "reports": "Skýrslur"
+    },
+    "bilar": {
+      "listings": "Bílar",
+      "contacts": "Tengiliðir",
+      "offers": "Tilboð",
+      "reports": "Skýrslur"
+    },
+    "openMenu": "Opna valmynd",
+    "userMenu": "Notandavalmynd"
+  },
+  "dashboard": {
+    "title": "Yfirlit",
+    "welcome": "Velkomin í {vertical}",
+    "emptyTitle": "Ekkert hér ennþá",
+    "emptyBody": "Yfirlitið fyllist af sölupípu, tilboðum og verkefnum þegar fyrstu eignirnar eru skráðar."
+  },
+  "settings": {
+    "title": "Stillingar",
+    "tenantInfo": "Upplýsingar um fyrirtæki",
+    "name": "Nafn",
+    "vertical": "Svið",
+    "plan": "Áskriftarleið",
+    "usersTitle": "Notendur",
+    "roles": {
+      "ADMIN": "Stjórnandi",
+      "AGENT": "Sölumaður",
+      "SUPERADMIN": "Kerfisstjóri"
+    }
+  },
+  "admin": {
+    "title": "Handsal stjórnborð",
+    "subtitle": "Kerfisstjórn",
+    "nav": {
+      "tenants": "Fyrirtæki",
+      "plans": "Áskriftarleiðir",
+      "audit": "Aðgerðaskrá"
+    },
+    "tenants": {
+      "title": "Fyrirtæki",
+      "new": "Nýtt fyrirtæki",
+      "edit": "Breyta fyrirtæki",
+      "name": "Nafn",
+      "slug": "Vefslóðarheiti (slug)",
+      "vertical": "Svið",
+      "plan": "Áskriftarleið",
+      "status": "Staða",
+      "users": "Notendur",
+      "created": "Stofnað",
+      "email": "Netfang",
+      "phone": "Sími",
+      "address": "Heimilisfang",
+      "brandColor": "Vörumerkislitur",
+      "logoUrl": "Slóð á merki (logo)",
+      "createdToast": "Fyrirtæki stofnað.",
+      "updatedToast": "Fyrirtæki uppfært.",
+      "errors": {
+        "slugTaken": "Þetta vefslóðarheiti er þegar í notkun.",
+        "invalidSlug": "Slug má aðeins innihalda lágstafi, tölustafi og bandstrik."
+      },
+      "usersSection": "Notendur fyrirtækis",
+      "noUsers": "Engir notendur ennþá.",
+      "addAdmin": "Stofna stjórnanda",
+      "adminName": "Nafn",
+      "adminEmail": "Netfang",
+      "tempPassword": "Bráðabirgðalykilorð",
+      "adminCreatedToast": "Stjórnandi stofnaður.",
+      "emailTaken": "Netfangið er þegar í notkun."
+    },
+    "plans": {
+      "title": "Áskriftarleiðir",
+      "new": "Ný áskriftarleið",
+      "edit": "Breyta áskriftarleið",
+      "name": "Heiti",
+      "maxActiveListings": "Hámark virkra skráninga",
+      "maxActiveListingsHint": "Tómt = ótakmarkað",
+      "monthlyPrice": "Mánaðarverð",
+      "tenants": "Fyrirtæki",
+      "createdToast": "Áskriftarleið stofnuð.",
+      "updatedToast": "Áskriftarleið uppfærð.",
+      "errors": {
+        "nameTaken": "Áskriftarleið með þessu heiti er þegar til."
+      }
+    },
+    "audit": {
+      "title": "Aðgerðaskrá",
+      "subtitle": "Aðgerðir á kerfisstigi",
+      "when": "Tími",
+      "action": "Aðgerð",
+      "actor": "Notandi",
+      "target": "Viðfang",
+      "empty": "Engar færslur ennþá."
+    }
+  }
+}
