@@ -81,6 +81,57 @@
       "SUPERADMIN": "Superadmin"
     }
   },
+  "contacts": {
+    "title": "Contacts",
+    "new": "New contact",
+    "delete": "Delete",
+    "savedToast": "Contact saved.",
+    "searchPlaceholder": "Search by name, email or kennitala…",
+    "empty": "No contacts yet. Create your first contact.",
+    "emptySearch": "No contacts found.",
+    "deleteConfirmTitle": "Delete contact?",
+    "deleteConfirmBody": "“{name}” will be permanently deleted. This cannot be undone.",
+    "linkedListings": "Linked listings",
+    "noLinkedListings": "No linked listings.",
+    "untitledListing": "Untitled listing",
+    "type": {
+      "PERSON": "Person",
+      "COMPANY": "Company"
+    },
+    "role": {
+      "SELLER": "Seljandi (seller)",
+      "BUYER": "Kaupandi (buyer)",
+      "PROSPECTIVE_BUYER": "Áhugasamur kaupandi (prospective buyer)",
+      "CO_OWNER": "Co-owner"
+    },
+    "fields": {
+      "type": "Type",
+      "name": "Name",
+      "kennitala": "Kennitala (national ID)",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
+      "notes": "Notes",
+      "tags": "Tags",
+      "tagsPlaceholder": "comma-separated, e.g. investor, landlord",
+      "contactInfo": "Contact info"
+    },
+    "lookup": {
+      "button": "Look up",
+      "hint": "A Þjóðskrá (national registry) lookup autofills name and legal domicile. Every lookup is written to the audit log.",
+      "foundToast": "{name} found in Þjóðskrá.",
+      "errors": {
+        "invalid": "The kennitala is not valid — check the input.",
+        "unavailable": "Could not reach Þjóðskrá. Please try again.",
+        "notFound": "The kennitala was not found in Þjóðskrá."
+      }
+    },
+    "errors": {
+      "kennitalaTaken": "A contact with this kennitala already exists.",
+      "invalidKennitala": "The kennitala is invalid.",
+      "inUse": "A contact linked to a listing cannot be deleted."
+    }
+  },
   "admin": {
     "title": "Handsal admin",
     "subtitle": "Platform administration",

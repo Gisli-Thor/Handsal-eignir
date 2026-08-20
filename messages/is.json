@@ -81,6 +81,57 @@
       "SUPERADMIN": "Kerfisstjóri"
     }
   },
+  "contacts": {
+    "title": "Tengiliðir",
+    "new": "Nýr tengiliður",
+    "delete": "Eyða",
+    "savedToast": "Tengiliður vistaður.",
+    "searchPlaceholder": "Leita eftir nafni, netfangi eða kennitölu…",
+    "empty": "Engir tengiliðir ennþá. Stofnaðu fyrsta tengiliðinn.",
+    "emptySearch": "Engir tengiliðir fundust.",
+    "deleteConfirmTitle": "Eyða tengilið?",
+    "deleteConfirmBody": "„{name}“ verður eytt varanlega. Þessa aðgerð er ekki hægt að afturkalla.",
+    "linkedListings": "Tengdar skráningar",
+    "noLinkedListings": "Engar tengdar skráningar.",
+    "untitledListing": "Ónefnd skráning",
+    "type": {
+      "PERSON": "Einstaklingur",
+      "COMPANY": "Fyrirtæki"
+    },
+    "role": {
+      "SELLER": "Seljandi",
+      "BUYER": "Kaupandi",
+      "PROSPECTIVE_BUYER": "Áhugasamur kaupandi",
+      "CO_OWNER": "Meðeigandi"
+    },
+    "fields": {
+      "type": "Tegund",
+      "name": "Nafn",
+      "kennitala": "Kennitala",
+      "email": "Netfang",
+      "phone": "Sími",
+      "address": "Heimilisfang",
+      "notes": "Athugasemdir",
+      "tags": "Merki",
+      "tagsPlaceholder": "aðskilin með kommu, t.d. fjárfestir, leigusali",
+      "contactInfo": "Samskiptaupplýsingar"
+    },
+    "lookup": {
+      "button": "Fletta upp",
+      "hint": "Uppfletting í Þjóðskrá fyllir sjálfkrafa út nafn og lögheimili. Öll uppfletting er skráð í aðgerðaskrá.",
+      "foundToast": "{name} fannst í Þjóðskrá.",
+      "errors": {
+        "invalid": "Kennitalan stenst ekki — athugaðu innslátt.",
+        "unavailable": "Ekki næst samband við Þjóðskrá. Reyndu aftur.",
+        "notFound": "Kennitalan fannst ekki í Þjóðskrá."
+      }
+    },
+    "errors": {
+      "kennitalaTaken": "Tengiliður með þessa kennitölu er þegar til.",
+      "invalidKennitala": "Kennitalan er ógild.",
+      "inUse": "Ekki er hægt að eyða tengilið sem er tengdur skráningu."
+    }
+  },
   "admin": {
     "title": "Handsal stjórnborð",
     "subtitle": "Kerfisstjórn",
