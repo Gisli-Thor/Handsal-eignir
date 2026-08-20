@@ -89,11 +89,26 @@ Decisions (M2 so far):
 6. **Áhvílandi lán on Listing** (not Property) so the Bílar vertical reuses the same structure (SPEC §5 "same structure").
 7. **Storage keys embed tenant**: `tenants/{tenantId}/listings/{listingId}/…`, always derived server-side; browser never controls keys. Signed GET URLs generated per render, plain `<img>` (next/image would cache expired signed URLs).
 
-## Next steps (if session is interrupted)
+### ⏸ Session stop point (2026-08-20, end of day)
 
-1. **User action needed for Docker**: admin PowerShell → `wsl --install --no-distribution` → reboot (SVM already enabled in BIOS)
-2. When Docker works: `npm run db:up && npm run db:migrate && npm run seed && npm run test:integration` — verifies M1 + M2 DB layers (tenant isolation + composite-FK suites), then smoke-test the M2 flows per README
-3. Then begin **M3 — Pipeline, offers, fyrirvarar**
+**M1 + M2 code complete and committed** (latest `33bb330`); typecheck, lint,
+35 unit tests and production `next build` all green. DB verification for both
+milestones is the only outstanding item.
+
+**Docker status**: SVM enabled in BIOS ✓ → `wsl --install --no-distribution`
+run in admin PowerShell ✓ → **machine rebooting now** (this was the last
+blocker; Docker Desktop should start after the reboot).
+
+**Exact next steps after reboot** (nothing else pending for M1/M2):
+
+1. Start Docker Desktop (wait until the engine is running; if it complains,
+   check `wsl --status` — the WSL component should now be present)
+2. `npm run db:up` — postgres :5432, MinIO :9000/:9001, Mailpit :1025/:8025
+3. `npm run db:migrate` — applies both migrations (`…_init`, `…_m2_contacts_properties_media`)
+4. `npm run seed` — plans, users, postal codes, contacts, 12 properties with photos (logins in README, password `handsal-demo1`)
+5. `npm run test:integration` — both isolation suites (M1 generic + M2 composite-FK)
+6. Smoke-test M2 flows per README "Demo flows" (Þjóðskrá lookup, media upload/reorder/cover, documents)
+7. Mark this stop point resolved here, mark M2 ✅, then begin **M3 — Pipeline, offers, fyrirvarar**
 
 ## M3 — Pipeline, offers, fyrirvarar ☐
 
