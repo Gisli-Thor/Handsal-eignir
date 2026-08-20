@@ -1,0 +1,1 @@
+Read SPEC.md fully before any work. Implement milestone by milestone per §14, updating PROGRESS.md
