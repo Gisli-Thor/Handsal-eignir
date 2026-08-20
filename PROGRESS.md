@@ -33,9 +33,23 @@ Decisions:
 
 Open questions / follow-ups:
 
-- **Docker Desktop is not installed on this machine** — `db:up`, `db:migrate`, `npm run seed` and `npm run test:integration` could not be executed yet. Everything else (typecheck, lint, unit tests, production build) is verified green. Once Docker Desktop is installed: `npm run db:up && npm run db:migrate && npm run seed && npm run test:integration`.
 - Warning email at 90% plan usage (SPEC §12) needs the EmailAdapter — lands with M4/M5.
 - Tenant-scoped audit view for tenant ADMINs (SPEC §13) — planned with M2+ when tenants have business events worth showing.
+
+### ⏸ Session stop point (2026-08-20)
+
+**All M1 code is written and committed** (5 commits, latest `9abe133`). Typecheck, lint, 13 unit tests, `next build`, and a live smoke test of the dev server (login page renders in `is`/`en`, middleware redirects work) are all verified green.
+
+**Blocked on Docker**: Docker Desktop was installed but failed to start — virtualization (AMD SVM) is disabled in the BIOS of this machine (ASUS ROG STRIX B550-F Gaming). The user is restarting to enable it: **BIOS (Del) → F7 Advanced Mode → Advanced → CPU Configuration → SVM Mode → Enabled → F10**. If Docker then complains about WSL, run `wsl --install --no-distribution` in an admin PowerShell and reboot once more.
+
+**Exact next steps when the session resumes** (nothing else is pending for M1):
+
+1. `npm run db:up` — start postgres/minio/mailpit
+2. `npm run db:migrate` — apply the initial migration (already generated in `prisma/migrations/20260820000000_init`)
+3. `npm run seed` — seed plans, superadmin, demo tenants (logins in README, password `handsal-demo1`)
+4. `npm run test:integration` — run the 22-test tenant isolation suite
+5. Optionally verify login flows manually at http://localhost:3000
+6. Mark this stop point resolved here, then **begin M2 — Contacts & properties**
 
 ## M2 — Contacts & properties ☐
 
