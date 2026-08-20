@@ -12,6 +12,16 @@
 export const TENANT_SCOPED_MODELS = {
   User: {},
   AuditLog: { appendOnly: true },
+  // M2 — contacts & properties. (PostalCode is deliberately absent: it is
+  // global reference data with no tenantId, read through unscopedDb.)
+  Contact: {},
+  Listing: {},
+  ListingAgent: {},
+  ListingContact: {},
+  Property: {},
+  EncumbranceLoan: {},
+  MediaAsset: {},
+  ListingDocument: {},
 } as const satisfies Record<string, { appendOnly?: boolean }>;
 
 export type TenantScopedModel = keyof typeof TENANT_SCOPED_MODELS;

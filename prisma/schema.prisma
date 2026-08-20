@@ -35,6 +35,52 @@ model Plan {
   tenants Tenant[]
 }
 
+enum ContactType {
+  PERSON
+  COMPANY
+}
+
+enum ListingContactRole {
+  SELLER
+  BUYER
+  PROSPECTIVE_BUYER
+  CO_OWNER
+}
+
+enum PropertyType {
+  FJOLBYLI
+  EINBYLI
+  RADHUS
+  PARHUS
+  HAED
+  ATVINNUHUSNAEDI
+  SUMARHUS
+  LOD
+  ANNAD
+}
+
+/// Bílskúr / bílastæði (SPEC §5 "bílskúr/bílastæði (enum + count)")
+enum ParkingType {
+  NONE
+  BILSKUR
+  BILSKYLI
+  STAEDI
+  STAEDI_I_BILAHUSI
+}
+
+enum MediaCategory {
+  PHOTO
+  FLOOR_PLAN
+  DOCUMENT_SCAN
+}
+
+enum ListingDocumentType {
+  EIGNASKIPTAYFIRLYSING
+  SKILALYSING
+  VEDBANDAYFIRLIT
+  ANNAD
+}
+
 model Tenant {
   id         String       @id @default(cuid())
   name       String
@@ -51,8 +97,10 @@ model Tenant {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
-  users     User[]
-  auditLogs AuditLog[]
+  users            User[]
+  auditLogs        AuditLog[]
+  contacts Contact[]
+  listings Listing[]
 }
 
 model User {
@@ -70,8 +118,11 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  auditLogs AuditLog[]
+  auditLogs          AuditLog[]
+  listingAssignments ListingAgent[]
 
+  // Composite target for tenant-safe FKs (ListingAgent etc.)
+  @@unique([tenantId, id])
   @@index([tenantId])
 }
 
@@ -93,4 +144,227 @@ model AuditLog {
 
   @@index([tenantId, createdAt])
   @@index([action])
+}
+
+/// Global reference data (Icelandic postal codes → locality + municipality,
+/// SPEC §5). Carries no tenant data; read through unscopedDb.
+model PostalCode {
+  /// e.g. "101"
+  code         String @id
+  /// Staður, e.g. "Reykjavík"
+  locality     String
+  /// Sveitarfélag, e.g. "Reykjavíkurborg"
+  municipality String
+
+  properties Property[]
+}
+
+/// CRM-lite contact (SPEC §4). Contacts never log in.
+model Contact {
+  id        String      @id @default(cuid())
+  tenantId  String
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
+  type      ContactType
+  /// Normalized to 10 digits, checksum-validated when present
+  kennitala String?
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  notes     String?
+  tags      String[]    @default([])
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  listingLinks ListingContact[]
+
+  @@unique([tenantId, kennitala])
+  // Composite target for tenant-safe FKs (ListingContact)
+  @@unique([tenantId, id])
+  @@index([tenantId, name])
+}
+
+/// Core listing base (SPEC §5) — shared by both verticals. Vertical-specific
+/// fields live on Property (Eignir) / Vehicle (Bílar, M6).
+model Listing {
+  id       String   @id @default(cuid())
+  tenantId String
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  vertical Vertical
+  /// Pipeline stage key — configuration data per vertical (SPEC §6). The
+  /// pipeline engine (M3) is the only writer once it lands.
+  stage    String   @default("UNDIRBUNINGUR")
+  /// Ásett verð. BigInt: commercial property prices exceed int4.
+  askingPriceISK BigInt?
+  descriptionIs  String?
+  descriptionEn  String?
+  publishedAt    DateTime?
+  soldAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  agents    ListingAgent[]
+  contacts  ListingContact[]
+  property  Property?
+  loans     EncumbranceLoan[]
+  media     MediaAsset[]
+  documents ListingDocument[]
+
+  // Composite target for tenant-safe FKs: child rows reference
+  // (tenantId, id) so a row can never point at another tenant's listing,
+  // even if application code slips.
+  @@unique([tenantId, id])
+  @@index([tenantId, stage])
+  @@index([tenantId, createdAt])
+}
+
+/// Responsible agent(s) on a listing. Composite FKs pin both the listing and
+/// the user to the row's own tenant.
+model ListingAgent {
+  id        String  @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [tenantId, userId], references: [tenantId, id])
+  isPrimary Boolean @default(false)
+
+  @@unique([listingId, userId])
+  @@index([tenantId, userId])
+}
+
+/// Contextual contact role per listing (SPEC §4): seljandi, kaupandi,
+/// áhugasamur kaupandi, co-owner.
+model ListingContact {
+  id        String             @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing            @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+  contactId String
+  contact   Contact            @relation(fields: [tenantId, contactId], references: [tenantId, id])
+  role      ListingContactRole
+  createdAt DateTime           @default(now())
+
+  @@unique([listingId, contactId, role])
+  @@index([tenantId, contactId])
+}
+
+/// Handsal Eignir property extension (SPEC §5) — 1:1 with a Listing.
+model Property {
+  id        String  @id @default(cuid())
+  tenantId  String
+  listingId String  @unique
+  listing   Listing @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+
+  fastanumer      String
+  landeignarnumer String?
+
+  gotuheiti  String
+  husnumer   String
+  /// Íbúð / merking
+  ibud       String?
+  postnumer  String
+  postalCode PostalCode @relation(fields: [postnumer], references: [code])
+
+  tegund PropertyType
+
+  /// Birt stærð, m² one decimal
+  birtStaerd    Decimal? @db.Decimal(7, 1)
+  /// Þar af geymsla, m²
+  tharAfGeymsla Decimal? @db.Decimal(7, 1)
+
+  herbergi      Int?
+  svefnherbergi Int?
+  badherbergi   Int?
+
+  /// Hæð (floor)
+  haed         Int?
+  lyfta        Boolean     @default(false)
+  parkingType  ParkingType @default(NONE)
+  parkingCount Int?
+  byggingarar  Int?
+
+  fasteignamatISK BigInt?
+  brunabotamatISK BigInt?
+
+  /// Notes / condition remarks
+  athugasemdir String?
+
+  @@unique([tenantId, listingId])
+  @@index([tenantId, fastanumer])
+  @@index([tenantId, postnumer])
+}
+
+/// Áhvílandi lán (SPEC §5). On the Listing so the Bílar vertical (M6) reuses
+/// the same structure.
+model EncumbranceLoan {
+  id        String  @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+
+  lender              String
+  remainingBalanceISK BigInt
+  /// Verðtryggt (true) / óverðtryggt (false)
+  verdtryggt          Boolean  @default(false)
+  /// Annual interest rate in percent, e.g. 4.25
+  interestRatePct     Decimal? @db.Decimal(5, 2)
+  /// Yfirtakanlegt (assumable)
+  yfirtakanlegt       Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  @@index([tenantId, listingId])
+}
+
+/// Photo / floor plan / document scan in object storage (SPEC §5 Media).
+/// Binaries live in S3; rows hold keys only.
+model MediaAsset {
+  id        String        @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing       @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+  category  MediaCategory
+
+  /// Original upload
+  storageKey String
+  /// Web-size derivative (generated server-side on upload)
+  webKey     String?
+  /// Thumbnail derivative
+  thumbKey   String?
+
+  filename    String
+  contentType String
+  sizeBytes   Int
+  width       Int?
+  height      Int?
+
+  sortOrder    Int
+  isCover      Boolean  @default(false)
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId, listingId, sortOrder])
+}
+
+/// Typed, dated document on a listing (SPEC §5 Documents):
+/// eignaskiptayfirlýsing, skilalýsing, veðbandayfirlit, free-form.
+model ListingDocument {
+  id        String              @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing             @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+  type      ListingDocumentType
+  title     String
+  /// Dagsetning skjals (not the upload time)
+  documentDate DateTime?
+
+  storageKey  String
+  filename    String
+  contentType String
+  sizeBytes   Int
+
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId, listingId])
 }

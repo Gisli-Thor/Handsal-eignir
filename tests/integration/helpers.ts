@@ -12,7 +12,7 @@ export function createTestClient(): PrismaClient {
 
 export async function truncateAll(db: PrismaClient): Promise<void> {
   await db.$executeRawUnsafe(
-    'TRUNCATE TABLE "AuditLog", "User", "Tenant", "Plan" CASCADE',
+    'TRUNCATE TABLE "ListingDocument", "MediaAsset", "EncumbranceLoan", "Property", "ListingContact", "ListingAgent", "Listing", "Contact", "PostalCode", "AuditLog", "User", "Tenant", "Plan" CASCADE',
   );
 }
 
