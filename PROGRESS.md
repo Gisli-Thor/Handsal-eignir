@@ -66,18 +66,18 @@ Completed:
 - [x] Composite tenant-safe FKs: child rows reference `(tenantId, id)` of Listing/Contact/User, so cross-tenant links are impossible at the DB level; new integration suite `tests/integration/m2-domain-isolation.test.ts`
 - [x] Contacts CRUD: list/search, create/edit/delete (delete blocked while linked), Þjóðskrá autofill with every lookup audited (kennitala + purpose + result), per-tenant kennitala uniqueness, is/en catalogs, nav unlocked
 
-In flight (code written, not yet committed):
+- [x] Storage lib (`src/lib/storage.ts`): presigned PUT/GET (10/5 min TTL), MinIO/S3 via env, server-derived keys `tenants/{tenantId}/listings/{listingId}/…`
+- [x] Media pipeline: sharp derivatives (web 1600px / thumb 480px JPEG, EXIF rotation), upload request/confirm/delete/reorder/cover/category server actions; media manager UI (multi-upload, drag-to-reorder, cover star, categories)
+- [x] Documents: typed (eignaskiptayfirlýsing/skilalýsing/veðbandayfirlit/annað) + dated uploads, signed download links, delete
+- [x] Listing/property CRUD: full SPEC §5 field set form (Icelandic input formats — decimal comma, dot-grouped ISK), list page with cover thumbs + stage badges + search, detail page (facts, media, documents, parties, agents, loans), edit, delete (cleans storage objects); creator = primary agent; RBAC via `requireManageableListing`
+- [x] Parties/agents/loans panels: link contacts by role, assign agents (primary auto-managed), áhvílandi lán add/remove
+- [x] Listings + contacts i18n complete in `is`/`en` (domain terms Icelandic in both, glossed in English)
+- [x] Postal code/municipality reference data (~100 codes, `prisma/seed-data/postal-codes.ts`) + seed upserts
+- [x] M2 seed: 8 contacts (checksum-valid kennitölur generated via `kennitalaCheckDigit`, incl. mock-Þjóðskrá test person), 12 properties across all pipeline stages with loans, seller/prospect links, and placeholder photos uploaded through the real derivative pipeline (skips photos gracefully if MinIO is down)
+- [x] README demo flows (M2), ARCHITECTURE.md (domain model, storage/media, composite FKs)
+- [x] Verified: typecheck, lint, 35 unit tests, production `next build` all green
 
-- [ ] Storage lib (`src/lib/storage.ts`): presigned PUT/GET, MinIO/S3 via env
-- [ ] Media pipeline: sharp derivatives (web 1600px / thumb 480px JPEG), upload request/confirm/delete/reorder/cover/category server actions; document upload actions (typed + dated)
-- [ ] Listing server actions (create/update/delete + contact links + agents + áhvílandi lán), property form, media manager UI
-
-Remaining for M2:
-
-- [ ] Listing pages (list, new, detail, edit) + documents/sellers/agents/loans panels
-- [ ] Listings i18n (is/en)
-- [ ] Postal code/municipality seed data + M2 seed extension (contacts + ~12 properties)
-- [ ] Typecheck/lint/tests green, docs updated, commits
+**M2 code complete — DB verification pending Docker** (same gate as M1): `npm run db:up && npm run db:migrate && npm run seed && npm run test:integration`.
 
 Decisions (M2 so far):
 
@@ -91,10 +91,9 @@ Decisions (M2 so far):
 
 ## Next steps (if session is interrupted)
 
-1. Finish listing UI: documents-panel, contacts-panel, agents-panel, loans-panel, pages (list/new/[id]/edit) — media-manager.tsx is done
-2. Listings i18n section in `messages/is.json` + `en.json`
-3. Postal codes seed + M2 seed data; commit remaining steps
-4. When Docker works: `npm run db:up && npm run db:migrate && npm run seed && npm run test:integration` (verifies M1 + M2 DB layers)
+1. **User action needed for Docker**: admin PowerShell → `wsl --install --no-distribution` → reboot (SVM already enabled in BIOS)
+2. When Docker works: `npm run db:up && npm run db:migrate && npm run seed && npm run test:integration` — verifies M1 + M2 DB layers (tenant isolation + composite-FK suites), then smoke-test the M2 flows per README
+3. Then begin **M3 — Pipeline, offers, fyrirvarar**
 
 ## M3 — Pipeline, offers, fyrirvarar ☐
 

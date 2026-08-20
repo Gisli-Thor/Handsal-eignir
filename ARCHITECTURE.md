@@ -53,6 +53,54 @@ The single most important invariant: **no query crosses a tenant boundary.**
   seeds/tests. Everything else goes through `getTenantDb`.
 - `tests/integration/tenant-isolation.test.ts` proves the invariant across
   every operation type; extend it whenever a scoped model is added.
+- **Composite tenant-safe FKs (M2, defense in depth):** child/join rows
+  (`ListingAgent`, `ListingContact`, `Property`, `EncumbranceLoan`,
+  `MediaAsset`, `ListingDocument`) reference parents by `(tenantId, id)`
+  composite foreign keys, so a row can never point at another tenant's
+  listing/contact/user even if application code slips. Consequence: creates
+  through the scoped client must pass `tenantId` explicitly (the extension
+  verifies it matches and would stamp it anyway; Prisma's types require it
+  because `tenantId` is part of the relation scalars). Proven in
+  `tests/integration/m2-domain-isolation.test.ts`.
+- `PostalCode` is global reference data (no `tenantId`), deliberately not in
+  the scoped-model registry; read it via `unscopedDb`.
+
+## Domain model (M2)
+
+- `Listing` is the **core base** (SPEC §5): stage (string key; the pipeline
+  engine lands in M3 and becomes the only writer), ásett verð (`BigInt` — ISK
+  amounts exceed int4 for commercial property), descriptions IS/EN,
+  agents/contacts/media/documents/loans relations. `Property` is the Eignir
+  1:1 extension; `Vehicle` (M6) will mirror this for Bílar.
+- Contact roles are contextual per listing via `ListingContact.role`
+  (SELLER / BUYER / PROSPECTIVE_BUYER / CO_OWNER).
+- Listing RBAC (`src/core/listings/permissions.ts`): all tenant users can view
+  all tenant listings; ADMIN manages all, AGENT manages assigned listings; the
+  creator becomes primary agent. Mutations funnel through
+  `requireManageableListing` (`src/app/(app)/listings/listing-access.ts`).
+- Kennitala validation lives in `src/core/contacts/kennitala.ts` (mod-11
+  checksum, structural checks, person/company by day+40). Contacts have a
+  per-tenant unique kennitala.
+- Every Þjóðskrá lookup is audit-logged (who/when/kennitala/purpose/result),
+  awaited, and failures propagate — a compliance requirement (SPEC §4). Mock
+  test kennitölur are documented in `src/adapters/registry/thjodskra.mock.ts`.
+
+## Storage & media pipeline (M2)
+
+- S3-compatible storage (`src/lib/storage.ts`): MinIO in dev, R2/S3 in prod,
+  configured via `S3_*` env vars. Binaries never touch Postgres.
+- Upload flow: server action hands out a **presigned PUT** (10 min TTL) for a
+  server-derived key `tenants/{tenantId}/listings/{listingId}/…` — the browser
+  never controls storage paths — then a confirm action downloads the original,
+  generates **web (1600px) and thumb (480px) JPEG derivatives** with sharp
+  (`src/core/media/derivatives.ts`, EXIF-rotation applied) and creates the
+  `MediaAsset` row. First photo becomes the cover; exactly one cover is kept.
+- Downloads are short-lived **signed GET URLs** (5 min) generated per render;
+  pages use plain `<img>` because next/image would cache expired signed URLs.
+- `MediaAsset` = images only (jpeg/png/webp, ≤25 MB, categories
+  PHOTO / FLOOR_PLAN / DOCUMENT_SCAN); PDFs and other files are
+  `ListingDocument` (typed + dated, ≤50 MB). Deleting rows also deletes the
+  storage objects.
 
 ## Auth & RBAC
 

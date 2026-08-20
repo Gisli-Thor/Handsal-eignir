@@ -81,7 +81,9 @@ Documented inline in `.env.example`. Secrets are only ever provided via env — 
 
 - **Sign in / theming** — log in as `anna@demo.is` (Eignir theme, copper accent) vs `bjarni@bilar.is` (Bílar theme, steel-blue accent). Language switch (Íslenska/English) is in the avatar menu, top right.
 - **Platform admin** — log in as `superadmin@handsal.is`: manage tenants and plans under `/admin`, create a tenant, assign a plan, create its first ADMIN user, and inspect the platform audit log.
-- *(M2+)* Contacts with Þjóðskrá lookup, properties and media, pipeline, offers/fyrirvarar, portal publishing, söluyfirlit, e-signing simulator (`/dev/signing`), commissions and dashboard — added milestone by milestone; this section grows with each.
+- **Contacts + Þjóðskrá lookup (M2)** — as `anna@demo.is`, open *Tengiliðir* → *Nýr tengiliður*, enter a kennitala and press *Fletta upp*. Test kennitölur (mock adapter): `010130-2989` (Gervimaður Ameríka), `010130-2399` (Útlönd), `010130-3019` (Afríka), `410130-2979` (Gervifélag ehf., autoselects company), `010130-5069` (always fails — simulated outage). Any other checksum-valid kennitala returns a deterministic generated person; invalid checksums are rejected. Every lookup lands in the audit log with purpose and result.
+- **Properties & media (M2)** — *Eignir* lists 12 seeded properties across all pipeline stages. Open one: property facts, photo gallery (upload JPG/PNG/WebP → server-side web+thumb derivatives, drag to reorder, star = cover, per-photo category), typed & dated documents (PDF/images, signed download links), sellers/prospects linked from contacts, responsible agents, and áhvílandi lán. RBAC: `jon@demo.is` (AGENT) can only edit listings he is assigned to; `anna@demo.is` (ADMIN) edits all.
+- *(M3+)* Pipeline, offers/fyrirvarar, portal publishing, söluyfirlit, e-signing simulator (`/dev/signing`), commissions and dashboard — added milestone by milestone; this section grows with each.
 
 ## Production
 
