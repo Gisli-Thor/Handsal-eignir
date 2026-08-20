@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Vertical {
+  EIGNIR
+  BILAR
+}
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  AGENT
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model Plan {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  /// null = unlimited active listings
+  maxActiveListings Int?
+  monthlyPriceISK   Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenants Tenant[]
+}
+
+model Tenant {
+  id         String       @id @default(cuid())
+  name       String
+  slug       String       @unique
+  vertical   Vertical
+  logoUrl    String?
+  brandColor String?
+  email      String?
+  phone      String?
+  address    String?
+  status     TenantStatus @default(ACTIVE)
+  planId     String
+  plan       Plan         @relation(fields: [planId], references: [id])
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  users     User[]
+  auditLogs AuditLog[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  /// null = platform-level SUPERADMIN (belongs to no tenant)
+  tenantId     String?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  role         Role
+  avatarUrl    String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  auditLogs AuditLog[]
+
+  @@index([tenantId])
+}
+
+/// Append-only. Never expose update or delete paths for this model.
+/// `action` is a string validated against the AuditAction union in
+/// src/core/audit/actions.ts so new actions don't require a migration.
+model AuditLog {
+  id          String   @id @default(cuid())
+  /// null = platform-level event (superadmin actions)
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  actorUserId String?
+  actorUser   User?    @relation(fields: [actorUserId], references: [id])
+  action      String
+  targetType  String?
+  targetId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([action])
+}
