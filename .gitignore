@@ -43,3 +43,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# legacy-system example PDFs — local reference only, contain real personal
+# data (kennitölur, names, phones); structure is distilled in examples/NOTES.md
+/examples/*.pdf
