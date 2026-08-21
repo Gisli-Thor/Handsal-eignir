@@ -45,6 +45,19 @@ export const AUDIT_ACTIONS = [
   "FYRIRVARI_CREATED",
   "FYRIRVARI_RESOLVED",
   "FYRIRVARI_DELETED",
+  // M4 — portal publishing (SPEC §8)
+  "PORTAL_PUBLISHED",
+  "PORTAL_UPDATED",
+  "PORTAL_UNPUBLISHED",
+  "PORTAL_SYNC_FAILED",
+  "PORTAL_LEAD_RECEIVED",
+  // M4 — söluyfirlit (SPEC §9, §13: document sends audited)
+  "SOLUYFIRLIT_GENERATED",
+  "DOCUMENT_SENT",
+  // M4 — e-signing (SPEC §11, §13: signing events audited)
+  "SIGNING_REQUEST_CREATED",
+  "SIGNING_REQUEST_CANCELLED",
+  "SIGNING_EVENT_RECEIVED",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

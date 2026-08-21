@@ -7,6 +7,7 @@ import { requireTenantUser } from "@/lib/auth-guards";
 import { getTenantDb } from "@/lib/db";
 import { deleteObjects } from "@/lib/storage";
 import { logAudit } from "@/core/audit/log";
+import { markPublicationsNeedUpdate } from "@/core/portals/sync";
 import { ListingAccessError, requireManageableListing } from "./listing-access";
 
 export type ListingActionState = {
@@ -211,6 +212,8 @@ export async function updateListingAction(
       targetId: listing.id,
       metadata: { fastanumer: property.fastanumer },
     });
+    // SPEC §8: editing a published listing flips publications to NEEDS_UPDATE.
+    await markPublicationsNeedUpdate(db, listing.id);
     revalidatePath("/listings");
     revalidatePath(`/listings/${listing.id}`);
     return { ok: true };
@@ -412,6 +415,7 @@ export async function addLoanAction(
         yfirtakanlegt: parsed.data.yfirtakanlegt,
       },
     });
+    await markPublicationsNeedUpdate(db, listing.id);
     revalidatePath(`/listings/${listing.id}`);
     return { ok: true };
   } catch (error) {
@@ -428,6 +432,7 @@ export async function deleteLoanAction(
     await db.encumbranceLoan.deleteMany({
       where: { id: loanId, listingId: listing.id },
     });
+    await markPublicationsNeedUpdate(db, listing.id);
     revalidatePath(`/listings/${listing.id}`);
     return { ok: true };
   } catch (error) {

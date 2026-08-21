@@ -48,7 +48,7 @@ export default async function ContactsPage({
   });
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-6">
+    <div className="mx-auto grid max-w-7xl gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <Button asChild>
@@ -99,14 +99,22 @@ export default async function ContactsPage({
                 {contacts.map((contact) => (
                   <TableRow key={contact.id}>
                     <TableCell>
-                      <Link
-                        href={`/contacts/${contact.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {contact.name}
-                      </Link>
+                      <span className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/contacts/${contact.id}`}
+                          className="font-medium hover:underline"
+                        >
+                          {contact.name}
+                        </Link>
+                        {contact.needsReview ? (
+                          <Badge className="bg-amber-500 text-white">
+                            {t("needsReview")}
+                          </Badge>
+                        ) : null}
+                      </span>
                       <div className="text-muted-foreground text-xs">
                         {t(`type.${contact.type}`)}
+                        {contact.source ? ` · ${t("leadSource", { source: contact.source })}` : ""}
                       </div>
                     </TableCell>
                     <TableCell className="hidden font-mono text-sm sm:table-cell">

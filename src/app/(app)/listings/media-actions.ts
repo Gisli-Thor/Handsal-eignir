@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
@@ -16,6 +16,7 @@ import {
   presignUpload,
   putObject,
 } from "@/lib/storage";
+import { markPublicationsNeedUpdate } from "@/core/portals/sync";
 import { ListingAccessError, requireManageableListing } from "./listing-access";
 
 const CATEGORY = z.enum(["PHOTO", "FLOOR_PLAN", "DOCUMENT_SCAN"]);
@@ -150,6 +151,7 @@ export async function confirmMediaUploadAction(
       metadata: { listingId: listing.id, filename, category },
     });
 
+    await markPublicationsNeedUpdate(db, listing.id);
     revalidatePath(`/listings/${listing.id}`);
     return { ok: true };
   } catch (error) {
@@ -189,6 +191,7 @@ export async function deleteMediaAction(
       targetId: asset.id,
       metadata: { listingId: listing.id, filename: asset.filename },
     });
+    await markPublicationsNeedUpdate(db, listing.id);
     revalidatePath(`/listings/${listing.id}`);
     return { ok: true };
   } catch (error) {
@@ -211,6 +214,7 @@ export async function setCoverAction(
       data: { isCover: false },
     });
     await db.mediaAsset.update({ where: { id: mediaId }, data: { isCover: true } });
+    await markPublicationsNeedUpdate(db, listing.id);
     revalidatePath(`/listings/${listing.id}`);
     return { ok: true };
   } catch (error) {
@@ -239,6 +243,7 @@ export async function setMediaCategoryAction(
         isCover: parsed.data === "PHOTO" ? asset.isCover : false,
       },
     });
+    await markPublicationsNeedUpdate(db, listing.id);
     revalidatePath(`/listings/${listing.id}`);
     return { ok: true };
   } catch (error) {
@@ -269,6 +274,7 @@ export async function reorderMediaAction(
         db.mediaAsset.update({ where: { id }, data: { sortOrder: index } }),
       ),
     );
+    await markPublicationsNeedUpdate(db, listing.id);
     revalidatePath(`/listings/${listing.id}`);
     return { ok: true };
   } catch (error) {

@@ -112,6 +112,8 @@
     "linkedListings": "Linked listings",
     "noLinkedListings": "No linked listings.",
     "untitledListing": "Untitled listing",
+    "needsReview": "Needs review",
+    "leadSource": "Lead from {source}",
     "type": {
       "PERSON": "Person",
       "COMPANY": "Company"
@@ -210,7 +212,10 @@
       "viewings": "Viewings and open houses",
       "tasks": "Tasks",
       "notes": "Notes",
-      "timeline": "Timeline"
+      "timeline": "Timeline",
+      "soluyfirlit": "Söluyfirlit (sales summary)",
+      "signing": "E-signing",
+      "portals": "Portal publishing"
     },
     "fields": {
       "gotuheiti": "Street",
@@ -471,6 +476,96 @@
       "empty": "No notes.",
       "newNote": "New note",
       "add": "Save"
+    }
+  },
+  "portals": {
+    "needsUpdatePrompt": "The listing has changed since it was published — the portals need a sync.",
+    "syncNow": "Sync now",
+    "enableToggle": "Enable/disable publishing",
+    "status": {
+      "NOT_PUBLISHED": "Not published",
+      "PUBLISHED": "Published",
+      "NEEDS_UPDATE": "Needs update",
+      "UNPUBLISHED": "Unpublished",
+      "ERROR": "Error"
+    },
+    "lastSynced": "Last synced",
+    "push": "Push",
+    "pull": "Pull",
+    "pushAll": "Push to all",
+    "pullAll": "Pull from all",
+    "unpublishAll": "Unpublish all",
+    "syncLog": "Sync log",
+    "action": {
+      "PUBLISH": "Publish",
+      "UPDATE": "Update",
+      "UNPUBLISH": "Unpublish",
+      "PULL": "Pull"
+    },
+    "syncFailed": "Sync failed: {portals}",
+    "syncDone": "Sync completed."
+  },
+  "soluyfirlit": {
+    "empty": "No söluyfirlit has been generated.",
+    "versionLabel": "Version {version}",
+    "current": "Current",
+    "download": "Download PDF",
+    "generate": "Generate söluyfirlit",
+    "regenerate": "Generate new version",
+    "generatedToast": "Söluyfirlit generated.",
+    "sendTitle": "Send version {version} to prospective buyers",
+    "noProspects": "No prospective buyers linked to the listing — link them under Parties.",
+    "noEmailShort": "no email",
+    "requestReceipt": "Request confirmation of receipt (e-signature)",
+    "send": "Send",
+    "sentToast": "Söluyfirlit sent to {count} recipients.",
+    "sendHistory": "Send history",
+    "receipt": "Receipt",
+    "errors": {
+      "renderFailed": "Failed to generate the PDF.",
+      "noEmail": "A recipient has no email address."
+    },
+    "email": {
+      "subject": "Söluyfirlit — {address} (version {version})",
+      "body": "Dear {name},\n\nAttached is the söluyfirlit (sales summary) for {address} (version {version}).\n\nYou can also download the document here (link valid for 7 days):\n{link}\n\nBest regards,\nHandsal"
+    }
+  },
+  "signing": {
+    "empty": "No signing requests.",
+    "status": {
+      "DRAFT": "Draft",
+      "SENT": "Sent",
+      "PARTIALLY_SIGNED": "Partially signed",
+      "SIGNED": "Signed",
+      "REJECTED": "Rejected",
+      "EXPIRED": "Expired",
+      "CANCELLED": "Cancelled"
+    },
+    "signerStatus": {
+      "PENDING": "Pending",
+      "SIGNED": "Signed",
+      "REJECTED": "Rejected"
+    },
+    "downloadSigned": "Download signed document",
+    "cancel": "Cancel",
+    "cancelledToast": "Signing request cancelled.",
+    "createdToast": "Signing request sent.",
+    "newTitle": "New signing request",
+    "selectSource": "Select a document to sign",
+    "source": {
+      "KAUPTILBOD": "Kauptilboð (generated from the accepted offer)",
+      "KAUPSAMNINGUR": "Kaupsamningur (draft)",
+      "AFSAL": "Afsal (draft)",
+      "DOCUMENT": "Document: {title}"
+    },
+    "selectSigners": "Select signers (kennitala required)",
+    "noKennitala": "no kennitala",
+    "create": "Send for signing",
+    "draftNote": "Generated documents are drafts — final templates come from the agency. Signing is simulated at /dev/signing.",
+    "errors": {
+      "noAcceptedOffer": "There is no accepted offer to generate a kauptilboð from.",
+      "invalidKennitala": "A signer's kennitala is invalid.",
+      "renderFailed": "Failed to generate the PDF."
     }
   },
   "timeline": {

@@ -29,13 +29,17 @@ import {
   requestDocumentUploadAction,
 } from "../document-actions";
 
-type DocumentType =
+/** Types selectable for manual uploads — UNDIRRITAD rows are created only by
+ * the e-signing flow (M4) but still render in the list. */
+type UploadableDocumentType =
   | "EIGNASKIPTAYFIRLYSING"
   | "SKILALYSING"
   | "VEDBANDAYFIRLIT"
   | "ANNAD";
 
-const DOCUMENT_TYPES: DocumentType[] = [
+type DocumentType = UploadableDocumentType | "UNDIRRITAD";
+
+const DOCUMENT_TYPES: UploadableDocumentType[] = [
   "EIGNASKIPTAYFIRLYSING",
   "SKILALYSING",
   "VEDBANDAYFIRLIT",
@@ -72,7 +76,7 @@ export function DocumentsPanel({
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [type, setType] = useState<DocumentType>("ANNAD");
+  const [type, setType] = useState<UploadableDocumentType>("ANNAD");
   const [pending, startTransition] = useTransition();
 
   function handleUpload(formData: FormData) {
@@ -141,7 +145,7 @@ export function DocumentsPanel({
           </div>
           <div className="grid gap-2">
             <Label>{t("type")}</Label>
-            <Select value={type} onValueChange={(v) => setType(v as DocumentType)}>
+            <Select value={type} onValueChange={(v) => setType(v as UploadableDocumentType)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

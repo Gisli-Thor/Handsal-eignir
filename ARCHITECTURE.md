@@ -149,6 +149,66 @@ The single most important invariant: **no query crosses a tenant boundary.**
   server-rendered timeline; the dashboard aggregates pending fyrirvarar,
   expiring offers, upcoming viewings and open tasks.
 
+## Portals, söluyfirlit & e-signing (M4)
+
+- **Portal publishing** (SPEC §8): `PortalAdapter` port
+  (`src/core/ports/portals.ts`) with three Eignir mock instances registered in
+  `src/lib/services.ts` (`getPortalAdapters(vertical)`). Orchestration in
+  `src/core/portals/sync.ts` is adapter-injected and **never throws** — each
+  portal fails independently into `PortalPublication.status = ERROR` +
+  lastError + a `PortalSyncEvent` (append-only log) + audit. One retry on
+  `TransientPortalError` (mocks fail ~5% with 300–1500 ms latency; RNG is
+  injectable for tests). Publication rows are **lazily upserted; a missing
+  row means enabled** — entering Í sölu publishes everywhere with zero setup
+  and later-registered portals aren't stranded. Pipeline hooks (Í sölu →
+  publish, Kaupsamningur → unpublish) ride the M3 post-commit hook slots;
+  content edits (fields/media/loans) call `markPublicationsNeedUpdate`.
+  Inbound leads from `pull` land as `Contact` rows flagged
+  `needsReview` (+`source`), linked as prospective buyers; repeat leads
+  append a `ListingNote` instead of duplicating.
+- **PDF infrastructure**: `@react-pdf/renderer` is in
+  `serverExternalPackages` (next.config.ts) and only ever loaded via the
+  dynamic import in `src/lib/pdf/render.ts`, which also registers Noto Sans
+  from `public/fonts` **on the same module instance** (CJS/ESM dual copies
+  have separate FontStores — the cause of "font not registered" under tsx)
+  as base64 data URIs (the resolver misparses `C:\` paths) with hyphenation
+  disabled (the default callback mangles Icelandic). PDF documents get no
+  React context — all data arrives pre-formatted as plain props. These
+  modules deliberately carry no `server-only` marker: the seed (tsx) and
+  integration tests (vitest) import them outside Next.
+- **Söluyfirlit** (SPEC §9): layout in
+  `src/verticals/eignir/soluyfirlit-pdf.tsx` mirrors the legacy-system
+  examples (examples/NOTES.md) and is Icelandic-only — a legal document, not
+  UI. Versions are append-only rows (`SoluyfirlitVersion`, `version = max+1`,
+  key `tenants/{t}/listings/{l}/soluyfirlit/v{n}.pdf`); sends are the
+  append-only proof-of-delivery log (`SoluyfirlitSend`, optional
+  `receiptSigningRequestId`). Emailed download links use
+  `EMAIL_LINK_TTL_SECONDS` (7 days) — `presignDownload` grew a `ttlSeconds`
+  param because the default 5-minute TTL is a dead link in an inbox.
+  Söluþóknun disclosure is `Listing.soluthoknunText` free text until M5's
+  commission schemes supersede it.
+- **E-signing** (SPEC §11): `SigningAdapter` port; the mock is **stateless**
+  (mints provider ids + links) — domain state lives in `SigningRequest` rows
+  and is driven exclusively through `POST /api/webhooks/signing`
+  (shared-secret header, `timingSafeEqual`, zod). The webhook resolves the
+  request by the **globally unique** `providerRequestId` via `unscopedDb`
+  (payloads carry no tenant context) and derives tenantId from the row;
+  signers are matched by `providerSignerId`. Status derivation in
+  `src/core/signing/status.ts` (any rejection → REJECTED; all signed →
+  SIGNED). On SIGNED: a react-pdf signature page
+  (`src/lib/pdf/signature-page.tsx`) is merged onto the source with pdf-lib
+  (`ignoreEncryption`, falls back to the signature page alone on merge
+  failure) and stored back as a `ListingDocument` of type `UNDIRRITAD`.
+  Draft contracts (kauptilboð from the accepted-offer snapshot with
+  amount-in-words via `src/core/format/isk-words.ts`, kaupsamningur/afsal
+  skeletons) are watermarked DRÖG — SPEC §15 forbids invented legal text.
+  `/dev/signing` (dev-gated, cross-tenant via unscopedDb — it plays the
+  provider) fires the real webhook route from its buttons; integration tests
+  import the route's `POST` directly.
+- **Wide-screen layout**: the listing detail page is `max-w-[1400px]` with an
+  `xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]` main/sidebar split; list pages
+  cap at 1600px/7xl (listings grid gains `2xl:grid-cols-4`).
+
 ## Auth & RBAC
 
 - Auth.js v5, credentials provider (bcryptjs), **JWT sessions** (the supported

@@ -174,7 +174,87 @@ Typecheck, lint, 56 unit + 41 integration tests, production build all green.
 Browser smoke test passed end-to-end, including a live reminder email landing
 in Mailpit from the running scheduler.
 
-## M4 — Portals, söluyfirlit, e-signing ☐
+## M4 — Portals, söluyfirlit, e-signing ✅ (2026-08-21)
+
+Completed:
+
+- [x] Schema (migration `20260821205728_m4_portals_soluyfirlit_signing`):
+  `PortalPublication` + `PortalSyncEvent` (append-only), `SoluyfirlitVersion`
+  + `SoluyfirlitSend` (both append-only, send links optional receipt
+  request), `SigningRequest` (+globally-unique providerRequestId) /
+  `SigningSigner` (providerSignerId) / `SigningEvent` (append-only);
+  `Contact.source/needsReview`, `Listing.soluthoknunText`,
+  `ListingDocumentType.UNDIRRITAD`; scoped-model registry + 10 audit actions
+- [x] Ports + mocks: `PortalAdapter` (3 Eignir mock instances, 300–1500 ms
+  latency, ~5% transient failures, fake leads on pull, injectable RNG) and
+  stateless `SigningAdapter` mock; `getPortalAdapters`/`getSigning` registry
+- [x] Publication lifecycle: `core/portals/sync.ts` (never throws — per-portal
+  ERROR isolation, retry-once, sync log + audit; lead ingestion with email
+  dedupe → flagged prospect contacts); pipeline hooks (Í sölu → publish,
+  Kaupsamningur → unpublish); NEEDS_UPDATE flips from listing/media/loan
+  edits; portals panel (toggles, statuses, push/pull, sync-now prompt, log)
+- [x] PDF infra: @react-pdf/renderer (serverExternalPackages + dynamic
+  import), Noto Sans from public/fonts registered as base64 on the imported
+  module instance, hyphenation disabled; pdf-lib for merging
+- [x] Söluyfirlit: PDF per SPEC §9 + examples/NOTES.md layout (tenant-branded,
+  cover photo, Þjóðskrá table, loans, söluþóknun disclosure, floor-plan page,
+  signature lines), versioning (max+1, immutable rows), send flow (bilingual
+  email + PDF attachment + 7-day signed link, send log, optional receipt
+  signature request), panel with full history
+- [x] E-signing: draft contract PDFs watermarked DRÖG (kauptilboð from
+  accepted-offer snapshot incl. amount-in-words util `isk-words.ts`;
+  kaupsamningur/afsal skeletons), signing panel (source picker incl. uploaded
+  PDFs, signer picker), webhook `POST /api/webhooks/signing` (shared secret,
+  timingSafeEqual, zod) → status derivation → on SIGNED stamp signature page
+  (react-pdf + pdf-lib merge) stored back as UNDIRRITAD document;
+  `/dev/signing` simulator fires the real webhook (dev-gated)
+- [x] Wide-screen layout (user request): listing detail max-w-[1400px] with
+  xl main/sidebar split; listings/dashboard 1600px caps; tables 7xl;
+  listings grid 2xl:grid-cols-4
+- [x] Seed: 11 publications in mixed states (incl. ERROR + sync log), 2
+  flagged inbound leads, söluyfirlit v1/v1+v2 with send log (real renders),
+  PARTIALLY_SIGNED kaupsamningur on Hafnargata 28 (completable in the
+  simulator)
+- [x] Tests: +24 unit (portal sync transitions/lead dedupe, isk-words
+  validated against the real documents' amounts, signing status derivation)
+  and +10 integration (lifecycle on real DB, composite-FK isolation,
+  append-only rules, webhook route auth + full sign→stamp→document flow
+  against MinIO). Totals: **80 unit + 51 integration, all green**
+- [x] Verified live in browser: portal publish-all with real mock latency +
+  sync log, söluyfirlit v2 rendered/downloaded (Icelandic glyphs, cover
+  photo, branding), send → Mailpit email with attachment + receipt request,
+  /dev/signing signed both open requests through the real webhook → stamped
+  UNDIRRITAD PDFs on the listings; wide layout verified at 1920px
+- [x] README demo flows (M4 + simulator per SPEC §16), ARCHITECTURE.md, this file
+
+Decisions (M4):
+
+1. **Publication rows lazily upserted; missing row = enabled** — entering
+   Í sölu publishes everywhere with zero setup; portals added to the registry
+   later aren't stranded.
+2. **Portal sync never throws** — per-portal failures become ERROR status +
+   log; pipeline hooks stay fire-and-forget.
+3. **Webhook tenant safety**: providerRequestId is globally unique; the
+   webhook (no tenant context) resolves via unscopedDb and derives tenantId
+   from the row. Signers matched by providerSignerId (not DB ids).
+4. **Signing mock is stateless**; domain state is webhook-authoritative. The
+   M4 UI has no separate DRAFT step (create → SENT); the enum keeps DRAFT for
+   provider parity.
+5. **PDF documents are Icelandic-only** — legal documents, not UI (SPEC §1.4
+   applies to UI strings; the send *email* is bilingual per §9).
+6. **`presignDownload` gained `ttlSeconds`** — emailed links use 7 days
+   (SigV4 max); the default 5-minute TTL stays for per-render page links.
+7. **Söluþóknun disclosure = `Listing.soluthoknunText` free text** until M5
+   commission schemes supersede it.
+8. **PDF modules carry no `server-only` marker** (seed/tsx and vitest import
+   them); they are kept out of client/edge bundles by the dynamic-import +
+   serverExternalPackages pattern instead. Fonts must register on the same
+   @react-pdf module instance that renders (dual-package FontStores).
+
+### M4 verification (2026-08-21)
+
+Typecheck, lint, 80 unit + 51 integration tests, production build (dev server
+stopped first) all green. Browser smoke passed end-to-end at 1920px width.
 
 ## M5 — Commission, plans, dashboard ☐
 

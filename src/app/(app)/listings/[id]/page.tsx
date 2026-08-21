@@ -19,9 +19,23 @@ import { ContactsPanel } from "./contacts-panel";
 import { AgentsPanel } from "./agents-panel";
 import { LoansPanel } from "./loans-panel";
 import { DeleteListingButton } from "./delete-listing-button";
+import { getPortalAdapters } from "@/lib/services";
 import { StageTimeline } from "./stage-timeline";
 import { OffersPanel, type OfferView } from "./offers-panel";
 import { FyrirvararPanel, type FyrirvariView } from "./fyrirvarar-panel";
+import { PortalsPanel, type PortalRow, type SyncLogRow } from "./portals-panel";
+import {
+  SoluyfirlitPanel,
+  type ProspectOption,
+  type SoluyfirlitSendItem,
+  type SoluyfirlitVersionItem,
+} from "./soluyfirlit-panel";
+import {
+  SigningPanel,
+  type PdfDocumentOption,
+  type SignerCandidate,
+  type SigningRequestItem,
+} from "./signing-panel";
 import {
   NotesPanel,
   TasksPanel,
@@ -50,11 +64,34 @@ export default async function ListingDetailPage({
       media: { orderBy: { sortOrder: "asc" } },
       documents: { orderBy: { createdAt: "desc" } },
       contacts: {
-        include: { contact: { select: { id: true, name: true } } },
+        include: {
+          contact: {
+            select: { id: true, name: true, email: true, phone: true, kennitala: true },
+          },
+        },
         orderBy: { createdAt: "asc" },
       },
       agents: { include: { user: { select: { id: true, name: true } } } },
       loans: { orderBy: { createdAt: "asc" } },
+      portalPublications: {
+        include: { syncEvents: { orderBy: { createdAt: "desc" }, take: 5 } },
+      },
+      soluyfirlitVersions: {
+        orderBy: { version: "desc" },
+        include: {
+          sends: {
+            orderBy: { createdAt: "desc" },
+            include: {
+              contact: { select: { name: true } },
+              receiptSigningRequest: { select: { status: true } },
+            },
+          },
+        },
+      },
+      signingRequests: {
+        orderBy: { createdAt: "desc" },
+        include: { signers: true },
+      },
       stageTransitions: { orderBy: { createdAt: "desc" } },
       offers: {
         orderBy: { createdAt: "asc" },
@@ -312,6 +349,113 @@ export default async function ListingDetailPage({
     ? (listing.stageTransitions.find((tr) => tr.toStage === WITHDRAWN_STAGE)?.reason ?? null)
     : null;
 
+  // ── M4: portal publications (registry keys left-joined with rows) ─────────
+  const publicationByKey = new Map(
+    listing.portalPublications.map((publication) => [publication.portalKey, publication]),
+  );
+  const portalRows: PortalRow[] = getPortalAdapters(listing.vertical).map((adapter) => {
+    const publication = publicationByKey.get(adapter.key);
+    return {
+      key: adapter.key,
+      displayName: adapter.displayName,
+      enabled: publication?.enabled ?? true,
+      status: publication?.status ?? "NOT_PUBLISHED",
+      lastSyncedFormatted: publication?.lastSyncedAt
+        ? formatDateTime(publication.lastSyncedAt)
+        : null,
+      lastError: publication?.lastError ?? null,
+    };
+  });
+  const adapterNameByKey = new Map(
+    getPortalAdapters(listing.vertical).map((adapter) => [adapter.key, adapter.displayName]),
+  );
+  const syncLogRows: SyncLogRow[] = listing.portalPublications
+    .flatMap((publication) =>
+      publication.syncEvents.map((event) => ({
+        id: event.id,
+        portalName: adapterNameByKey.get(publication.portalKey) ?? publication.portalKey,
+        action: event.action,
+        ok: event.ok,
+        message: event.message,
+        at: event.createdAt,
+      })),
+    )
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, 10)
+    .map(({ at, ...row }) => ({ ...row, whenFormatted: formatDateTime(at) }));
+
+  // ── M4: söluyfirlit versions + send history ───────────────────────────────
+  const soluyfirlitVersions: SoluyfirlitVersionItem[] = await Promise.all(
+    listing.soluyfirlitVersions.map(async (version) => ({
+      id: version.id,
+      version: version.version,
+      createdAtFormatted: formatDateTime(version.createdAt),
+      generatedByName: userName(version.generatedById),
+      downloadUrl: await presignDownload(
+        version.storageKey,
+        `soluyfirlit-v${version.version}.pdf`,
+      ),
+    })),
+  );
+  const tSigning = await getTranslations("signing");
+  const soluyfirlitSends: SoluyfirlitSendItem[] = listing.soluyfirlitVersions
+    .flatMap((version) =>
+      version.sends.map((send) => ({
+        id: send.id,
+        contactName: send.contact.name,
+        version: version.version,
+        sentByName: userName(send.sentById),
+        at: send.createdAt,
+        receiptStatus: send.receiptSigningRequest
+          ? tSigning(`status.${send.receiptSigningRequest.status}`)
+          : null,
+      })),
+    )
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, 20)
+    .map(({ at, ...row }) => ({ ...row, whenFormatted: formatDateTime(at) }));
+  const prospects: ProspectOption[] = listing.contacts
+    .filter((link) => link.role === "PROSPECTIVE_BUYER" || link.role === "BUYER")
+    .map((link) => ({
+      id: link.contactId,
+      name: link.contact.name,
+      hasEmail: link.contact.email !== null,
+      hasKennitala: link.contact.kennitala !== null,
+    }));
+
+  // ── M4: signing requests ───────────────────────────────────────────────────
+  const signingRequests: SigningRequestItem[] = await Promise.all(
+    listing.signingRequests.map(async (request) => ({
+      id: request.id,
+      title: request.title,
+      docType: request.docType,
+      status: request.status,
+      createdAtFormatted: formatDateTime(request.createdAt),
+      signers: request.signers.map((signer) => ({
+        name: signer.name,
+        kennitala: signer.kennitala,
+        status: signer.status,
+      })),
+      signedDownloadUrl: request.signedKey
+        ? await presignDownload(request.signedKey, `undirritad.pdf`)
+        : null,
+    })),
+  );
+  const tContactRoles = await getTranslations("contacts.role");
+  const roleLabel = (role: string) => tContactRoles(role);
+  const signerCandidates: SignerCandidate[] = listing.contacts.map((link) => ({
+    key: link.id,
+    name: link.contact.name,
+    kennitala: link.contact.kennitala,
+    email: link.contact.email,
+    phone: link.contact.phone,
+    roleLabel: roleLabel(link.role),
+  }));
+  const pdfDocuments: PdfDocumentOption[] = listing.documents
+    .filter((document) => document.contentType === "application/pdf" && document.type !== "UNDIRRITAD")
+    .map((document) => ({ id: document.id, title: document.title }));
+  const hasAcceptedOffer = listing.offers.some((offer) => offer.status === "ACCEPTED");
+
   const property = listing.property;
   const addressLine = property ? propertyAddressLine(property) : t("untitled");
   const yesNo = (value: boolean) => (value ? tCommon("yes") : tCommon("no"));
@@ -384,7 +528,7 @@ export default async function ListingDetailPage({
     : [];
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-6">
+    <div className="mx-auto grid max-w-[1400px] gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href="/listings">
@@ -440,6 +584,9 @@ export default async function ListingDetailPage({
         </CardContent>
       </Card>
 
+      {/* Wide screens: main column + sidebar (M4 layout pass) */}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
+      <div className="grid min-w-0 gap-6">
       {property ? (
         <Card>
           <CardHeader>
@@ -509,6 +656,51 @@ export default async function ListingDetailPage({
 
       <Card>
         <CardHeader>
+          <CardTitle>{t("sections.soluyfirlit")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SoluyfirlitPanel
+            listingId={listing.id}
+            versions={soluyfirlitVersions}
+            sends={soluyfirlitSends}
+            prospects={prospects}
+            canManage={canManage}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("sections.signing")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SigningPanel
+            listingId={listing.id}
+            requests={signingRequests}
+            hasAcceptedOffer={hasAcceptedOffer}
+            pdfDocuments={pdfDocuments}
+            signerCandidates={signerCandidates}
+            canManage={canManage}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("sections.portals")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PortalsPanel
+            listingId={listing.id}
+            portals={portalRows}
+            syncLog={syncLogRows}
+            canManage={canManage}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>{t("sections.media")}</CardTitle>
         </CardHeader>
         <CardContent>
@@ -533,7 +725,19 @@ export default async function ListingDetailPage({
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("sections.timeline")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Timeline entries={timelineEntries} empty={tTimeline("empty")} />
+        </CardContent>
+      </Card>
+      </div>
+
+      {/* Sidebar */}
+      <div className="grid min-w-0 gap-6">
+      <div className="grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle>{t("sections.parties")}</CardTitle>
@@ -594,7 +798,7 @@ export default async function ListingDetailPage({
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle>{t("sections.viewings")}</CardTitle>
@@ -632,15 +836,8 @@ export default async function ListingDetailPage({
           <NotesPanel listingId={listing.id} notes={noteItems} canManage={canManage} />
         </CardContent>
       </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("sections.timeline")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Timeline entries={timelineEntries} empty={tTimeline("empty")} />
-        </CardContent>
-      </Card>
+      </div>
+      </div>
     </div>
   );
 }

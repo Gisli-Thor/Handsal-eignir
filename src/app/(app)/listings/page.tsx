@@ -63,7 +63,7 @@ export default async function ListingsPage({
   );
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6">
+    <div className="mx-auto grid max-w-[1600px] gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         {session.user.vertical === "EIGNIR" ? (
@@ -99,7 +99,7 @@ export default async function ListingsPage({
           </CardContent>
         </Card>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {rows.map(({ listing, thumbUrl }) => (
             <li key={listing.id}>
               <Link

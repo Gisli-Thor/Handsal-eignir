@@ -32,6 +32,14 @@ export const TENANT_SCOPED_MODELS = {
   ViewingAttendee: {},
   ListingNote: {},
   ListingTask: {},
+  // M4 — portal publishing, söluyfirlit, e-signing
+  PortalPublication: {},
+  PortalSyncEvent: { appendOnly: true },
+  SoluyfirlitVersion: { appendOnly: true },
+  SoluyfirlitSend: { appendOnly: true },
+  SigningRequest: {},
+  SigningSigner: {},
+  SigningEvent: { appendOnly: true },
 } as const satisfies Record<string, { appendOnly?: boolean }>;
 
 export type TenantScopedModel = keyof typeof TENANT_SCOPED_MODELS;

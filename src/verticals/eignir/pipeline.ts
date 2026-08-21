@@ -8,6 +8,7 @@
  */
 import type { PipelineConfig, TransitionHook } from "@/core/pipeline/types";
 import { fyrirvararGuard } from "@/core/fyrirvarar/guard";
+import { runPortalSync } from "@/lib/portal-sync";
 
 export const EIGNIR_STAGES = [
   "UNDIRBUNINGUR",
@@ -37,6 +38,25 @@ const stampSoldAt: TransitionHook = async (ctx) => {
   });
 };
 
+/** SPEC §8: entering Í sölu auto-publishes to all enabled portals. The sync
+ * layer isolates per-portal failures (never throws). */
+const publishToPortals: TransitionHook = async (ctx) => {
+  await runPortalSync("publish", {
+    tenantId: ctx.tenantId,
+    listingId: ctx.listingId,
+    actorUserId: ctx.actorUserId,
+  });
+};
+
+/** SPEC §8: entering Kaupsamningur auto-unpublishes from all portals. */
+const unpublishFromPortals: TransitionHook = async (ctx) => {
+  await runPortalSync("unpublish", {
+    tenantId: ctx.tenantId,
+    listingId: ctx.listingId,
+    actorUserId: ctx.actorUserId,
+  });
+};
+
 export const eignirPipeline: PipelineConfig = {
   vertical: "EIGNIR",
   stages: EIGNIR_STAGES,
@@ -45,7 +65,8 @@ export const eignirPipeline: PipelineConfig = {
     KAUPSAMNINGUR: [fyrirvararGuard],
   },
   hooks: {
-    I_SOLU: [stampPublishedAt],
+    I_SOLU: [stampPublishedAt, publishToPortals],
+    KAUPSAMNINGUR: [unpublishFromPortals],
     AFSAL_LOKID: [stampSoldAt],
   },
 };

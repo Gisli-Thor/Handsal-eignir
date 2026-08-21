@@ -40,7 +40,7 @@ export default async function SettingsPage() {
   });
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-6">
+    <div className="mx-auto grid max-w-7xl gap-6">
       <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
 
       <Card>

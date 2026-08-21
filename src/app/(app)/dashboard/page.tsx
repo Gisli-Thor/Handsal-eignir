@@ -164,7 +164,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-[1600px]">
       <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
       <p className="text-muted-foreground mt-1 text-sm">
         {t("welcome", { vertical: verticalName })}

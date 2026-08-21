@@ -16,6 +16,8 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const UPLOAD_URL_TTL_SECONDS = 10 * 60;
 const DOWNLOAD_URL_TTL_SECONDS = 5 * 60;
+/** For links that leave the app (emails) — SigV4 maximum is 7 days. */
+export const EMAIL_LINK_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 const globalForStorage = globalThis as unknown as {
   s3Client?: S3Client;
@@ -73,10 +75,14 @@ export async function presignUpload(
   );
 }
 
-/** Short-lived signed download URL; `filename` forces a download dialog. */
+/** Signed download URL; `filename` forces a download dialog. Default TTL is
+ * short (per-render page links); pass `ttlSeconds` (e.g.
+ * {@link EMAIL_LINK_TTL_SECONDS}) for links that leave the app in emails —
+ * a 5-minute link in an inbox is a dead link. */
 export async function presignDownload(
   key: string,
   filename?: string,
+  ttlSeconds: number = DOWNLOAD_URL_TTL_SECONDS,
 ): Promise<string> {
   return getSignedUrl(
     getS3(),
@@ -89,7 +95,7 @@ export async function presignDownload(
           }
         : {}),
     }),
-    { expiresIn: DOWNLOAD_URL_TTL_SECONDS },
+    { expiresIn: ttlSeconds },
   );
 }
 

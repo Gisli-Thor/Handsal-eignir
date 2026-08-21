@@ -46,7 +46,7 @@ export default async function OffersPage() {
   const now = Date.now();
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-6">
+    <div className="mx-auto grid max-w-7xl gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{t("pageTitle")}</h1>
         <p className="text-muted-foreground mt-1 text-sm">{t("pageSubtitle")}</p>

@@ -116,6 +116,49 @@ enum ListingDocumentType {
   SKILALYSING
   VEDBANDAYFIRLIT
   ANNAD
+  /// Signed document stored back from an e-signing flow (M4)
+  UNDIRRITAD
+}
+
+// ── M4: portal publishing, söluyfirlit, e-signing ────────────────────────────
+
+enum PortalPublicationStatus {
+  NOT_PUBLISHED
+  PUBLISHED
+  NEEDS_UPDATE
+  UNPUBLISHED
+  ERROR
+}
+
+enum PortalSyncAction {
+  PUBLISH
+  UPDATE
+  UNPUBLISH
+  PULL
+}
+
+enum SigningDocType {
+  KAUPTILBOD
+  KAUPSAMNINGUR
+  AFSAL
+  UPLOADED_PDF
+  SOLUYFIRLIT_RECEIPT
+}
+
+enum SigningRequestStatus {
+  DRAFT
+  SENT
+  PARTIALLY_SIGNED
+  SIGNED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum SigningSignerStatus {
+  PENDING
+  SIGNED
+  REJECTED
 }
 
 model Tenant {
@@ -211,12 +254,17 @@ model Contact {
   address   String?
   notes     String?
   tags      String[]    @default([])
+  /// Where the contact came from (portal key for inbound leads, SPEC §8)
+  source      String?
+  /// Inbound leads land flagged for review (SPEC §8)
+  needsReview Boolean  @default(false)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
   listingLinks       ListingContact[]
   offerLinks         OfferBuyer[]
   viewingAttendances ViewingAttendee[]
+  soluyfirlitSends   SoluyfirlitSend[]
 
   @@unique([tenantId, kennitala])
   // Composite target for tenant-safe FKs (ListingContact)
@@ -238,6 +286,9 @@ model Listing {
   askingPriceISK BigInt?
   descriptionIs  String?
   descriptionEn  String?
+  /// Söluþóknun disclosure line on the söluyfirlit (SPEC §9). Free text until
+  /// M5 commission schemes supersede it (decision in PROGRESS.md).
+  soluthoknunText String?
   publishedAt    DateTime?
   soldAt         DateTime?
   createdAt      DateTime  @default(now())
@@ -255,6 +306,10 @@ model Listing {
   viewings         Viewing[]
   notes            ListingNote[]
   tasks            ListingTask[]
+
+  portalPublications PortalPublication[]
+  soluyfirlitVersions SoluyfirlitVersion[]
+  signingRequests    SigningRequest[]
 
   // Composite target for tenant-safe FKs: child rows reference
   // (tenantId, id) so a row can never point at another tenant's listing,
@@ -588,6 +643,165 @@ model ListingNote {
   createdAt   DateTime @default(now())
 
   @@index([tenantId, listingId, createdAt])
+}
+
+// ── M4: portal publishing ────────────────────────────────────────────────────
+
+/// Per-listing, per-portal publication state (SPEC §8). Rows are lazily
+/// upserted — a missing row means "enabled, not published yet" so entering
+/// Í sölu publishes everywhere with zero setup (decision in PROGRESS.md).
+model PortalPublication {
+  id        String  @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+
+  /// Registry key, e.g. "fasteignir" — configuration data like Listing.stage
+  portalKey String
+  enabled   Boolean                 @default(true)
+  status    PortalPublicationStatus @default(NOT_PUBLISHED)
+  remoteId  String?
+  lastSyncedAt DateTime?
+  lastError    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  syncEvents PortalSyncEvent[]
+
+  @@unique([listingId, portalKey])
+  // Composite target for tenant-safe child FKs
+  @@unique([tenantId, id])
+  @@index([tenantId, status])
+}
+
+/// Full sync log per publication (SPEC §8). Append-only.
+model PortalSyncEvent {
+  id            String            @id @default(cuid())
+  tenantId      String
+  publicationId String
+  publication   PortalPublication @relation(fields: [tenantId, publicationId], references: [tenantId, id], onDelete: Cascade)
+
+  action  PortalSyncAction
+  ok      Boolean
+  message String?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, publicationId, createdAt])
+}
+
+// ── M4: söluyfirlit ──────────────────────────────────────────────────────────
+
+/// Generated söluyfirlit PDF (SPEC §9). Immutable — regenerating creates the
+/// next version; old versions remain downloadable.
+model SoluyfirlitVersion {
+  id        String  @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+
+  version    Int
+  storageKey String
+  generatedById String?
+  createdAt     DateTime @default(now())
+
+  sends SoluyfirlitSend[]
+
+  @@unique([listingId, version])
+  // Composite target for the send-log FK
+  @@unique([tenantId, id])
+}
+
+/// Send log (SPEC §9): who received which version, when, sent by whom.
+/// Append-only — this is the agent's proof of delivery.
+model SoluyfirlitSend {
+  id        String             @id @default(cuid())
+  tenantId  String
+  versionId String
+  version   SoluyfirlitVersion @relation(fields: [tenantId, versionId], references: [tenantId, id], onDelete: Cascade)
+  contactId String
+  contact   Contact            @relation(fields: [tenantId, contactId], references: [tenantId, id])
+
+  sentById       String?
+  emailMessageId String?
+  /// Optional receipt-confirmation request (SPEC §9), when requested per send
+  receiptSigningRequestId String?
+  receiptSigningRequest   SigningRequest? @relation(fields: [tenantId, receiptSigningRequestId], references: [tenantId, id])
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, versionId])
+  @@index([tenantId, contactId])
+}
+
+// ── M4: e-signing ────────────────────────────────────────────────────────────
+
+/// E-signing request (SPEC §11), provider-agnostic. Domain state here is
+/// authoritative and driven by the webhook (/api/webhooks/signing).
+model SigningRequest {
+  id        String  @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+
+  title     String
+  docType   SigningDocType
+  /// The PDF that was sent for signing (object storage key)
+  sourceKey String
+  status    SigningRequestStatus @default(DRAFT)
+  /// Provider-side id — globally unique: the webhook has no tenant context
+  /// and resolves the request by this id (then derives tenantId from the row)
+  providerRequestId String? @unique
+  /// The stamped/signed PDF once fully signed
+  signedKey String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  signers SigningSigner[]
+  events  SigningEvent[]
+  receiptSends SoluyfirlitSend[]
+
+  // Composite target for tenant-safe child FKs
+  @@unique([tenantId, id])
+  @@index([tenantId, listingId])
+  @@index([tenantId, status])
+}
+
+model SigningSigner {
+  id        String         @id @default(cuid())
+  tenantId  String
+  requestId String
+  request   SigningRequest @relation(fields: [tenantId, requestId], references: [tenantId, id], onDelete: Cascade)
+
+  name      String
+  kennitala String
+  email     String?
+  phone     String?
+  /// Provider-side signer id — webhook payloads identify signers by this
+  providerSignerId String
+  signerLink       String?
+  status    SigningSignerStatus @default(PENDING)
+  signedAt  DateTime?
+
+  @@unique([requestId, providerSignerId])
+  @@index([tenantId, requestId])
+}
+
+/// Full status history for a signing request (SPEC §11). Append-only.
+/// `event` is a string (provider-shaped) validated by zod at the webhook.
+model SigningEvent {
+  id        String         @id @default(cuid())
+  tenantId  String
+  requestId String
+  request   SigningRequest @relation(fields: [tenantId, requestId], references: [tenantId, id], onDelete: Cascade)
+
+  event     String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, requestId, createdAt])
 }
 
 /// Task with due date and assignee (SPEC §5 activity).

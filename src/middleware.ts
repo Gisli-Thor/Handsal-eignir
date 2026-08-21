@@ -41,6 +41,7 @@ export default auth((req) => {
 });
 
 export const config = {
-  // Everything except Next internals, static assets and the Auth.js API.
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp|ico)).*)"],
+  // Everything except Next internals, static assets, the Auth.js API and
+  // provider webhooks (which authenticate with their own shared secret).
+  matcher: ["/((?!api/auth|api/webhooks|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp|ico)).*)"],
 };

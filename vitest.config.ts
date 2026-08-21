@@ -4,6 +4,10 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  // Next.js sets tsconfig `jsx: "preserve"`; tell the transformer (oxc in
+  // this Vite) to actually transform JSX so tests can import .tsx modules
+  // (PDF documents).
+  oxc: { jsx: { runtime: "automatic" } },
   test: {
     projects: [
       {

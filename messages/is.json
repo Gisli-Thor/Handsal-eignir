@@ -112,6 +112,8 @@
     "linkedListings": "Tengdar skráningar",
     "noLinkedListings": "Engar tengdar skráningar.",
     "untitledListing": "Ónefnd skráning",
+    "needsReview": "Til yfirferðar",
+    "leadSource": "Fyrirspurn frá {source}",
     "type": {
       "PERSON": "Einstaklingur",
       "COMPANY": "Fyrirtæki"
@@ -210,7 +212,10 @@
       "viewings": "Skoðanir og opin hús",
       "tasks": "Verkefni",
       "notes": "Minnispunktar",
-      "timeline": "Atburðasaga"
+      "timeline": "Atburðasaga",
+      "soluyfirlit": "Söluyfirlit",
+      "signing": "Rafræn undirritun",
+      "portals": "Birting á vefgáttum"
     },
     "fields": {
       "gotuheiti": "Götuheiti",
@@ -471,6 +476,96 @@
       "empty": "Engir minnispunktar.",
       "newNote": "Nýr minnispunktur",
       "add": "Vista"
+    }
+  },
+  "portals": {
+    "needsUpdatePrompt": "Skráningin hefur breyst síðan hún var birt — samstilla þarf vefgáttir.",
+    "syncNow": "Samstilla núna",
+    "enableToggle": "Virkja/afvirkja birtingu",
+    "status": {
+      "NOT_PUBLISHED": "Óbirt",
+      "PUBLISHED": "Birt",
+      "NEEDS_UPDATE": "Þarf samstillingu",
+      "UNPUBLISHED": "Tekin úr birtingu",
+      "ERROR": "Villa"
+    },
+    "lastSynced": "Síðast samstillt",
+    "push": "Birta",
+    "pull": "Sækja",
+    "pushAll": "Birta á öllum",
+    "pullAll": "Sækja frá öllum",
+    "unpublishAll": "Taka úr birtingu",
+    "syncLog": "Samstillingarsaga",
+    "action": {
+      "PUBLISH": "Birting",
+      "UPDATE": "Uppfærsla",
+      "UNPUBLISH": "Afbirting",
+      "PULL": "Sótt"
+    },
+    "syncFailed": "Samstilling mistókst: {portals}",
+    "syncDone": "Samstillingu lokið."
+  },
+  "soluyfirlit": {
+    "empty": "Ekkert söluyfirlit hefur verið útbúið.",
+    "versionLabel": "Útgáfa {version}",
+    "current": "Gildandi",
+    "download": "Sækja PDF",
+    "generate": "Útbúa söluyfirlit",
+    "regenerate": "Útbúa nýja útgáfu",
+    "generatedToast": "Söluyfirlit útbúið.",
+    "sendTitle": "Senda útgáfu {version} til áhugasamra kaupenda",
+    "noProspects": "Engir áhugasamir kaupendur tengdir eigninni — tengdu þá undir Aðilar.",
+    "noEmailShort": "vantar netfang",
+    "requestReceipt": "Óska eftir staðfestingu móttöku (rafræn undirritun)",
+    "send": "Senda",
+    "sentToast": "Söluyfirlit sent á {count} viðtakendur.",
+    "sendHistory": "Sendingarsaga",
+    "receipt": "Staðfesting",
+    "errors": {
+      "renderFailed": "Ekki tókst að útbúa PDF-skjalið.",
+      "noEmail": "Viðtakanda vantar netfang."
+    },
+    "email": {
+      "subject": "Söluyfirlit — {address} (útgáfa {version})",
+      "body": "Sæl/l {name},\n\nMeðfylgjandi er söluyfirlit fyrir {address} (útgáfa {version}).\n\nEinnig má sækja skjalið hér (hlekkur gildir í 7 daga):\n{link}\n\nKveðja,\nHandsal"
+    }
+  },
+  "signing": {
+    "empty": "Engar undirritunarbeiðnir.",
+    "status": {
+      "DRAFT": "Drög",
+      "SENT": "Send",
+      "PARTIALLY_SIGNED": "Að hluta undirrituð",
+      "SIGNED": "Undirrituð",
+      "REJECTED": "Hafnað",
+      "EXPIRED": "Útrunnin",
+      "CANCELLED": "Afturkölluð"
+    },
+    "signerStatus": {
+      "PENDING": "Bíður",
+      "SIGNED": "Undirritað",
+      "REJECTED": "Hafnað"
+    },
+    "downloadSigned": "Sækja undirritað skjal",
+    "cancel": "Afturkalla",
+    "cancelledToast": "Undirritunarbeiðni afturkölluð.",
+    "createdToast": "Undirritunarbeiðni send.",
+    "newTitle": "Ný undirritunarbeiðni",
+    "selectSource": "Veldu skjal til undirritunar",
+    "source": {
+      "KAUPTILBOD": "Kauptilboð (útbúið úr samþykktu tilboði)",
+      "KAUPSAMNINGUR": "Kaupsamningur (drög)",
+      "AFSAL": "Afsal (drög)",
+      "DOCUMENT": "Skjal: {title}"
+    },
+    "selectSigners": "Veldu undirritendur (kennitala er nauðsynleg)",
+    "noKennitala": "vantar kennitölu",
+    "create": "Senda til undirritunar",
+    "draftNote": "Útbúin skjöl eru drög — endanleg sniðmát koma frá fasteignasölunni. Undirritun er hermd í /dev/signing.",
+    "errors": {
+      "noAcceptedOffer": "Ekkert samþykkt tilboð er til að útbúa kauptilboð úr.",
+      "invalidKennitala": "Kennitala undirritanda er ógild.",
+      "renderFailed": "Ekki tókst að útbúa PDF-skjalið."
     }
   },
   "timeline": {

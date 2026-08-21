@@ -21,7 +21,10 @@ import type {
 } from "../src/generated/prisma/enums";
 import { kennitalaCheckDigit } from "../src/core/contacts/kennitala";
 import { buildAcceptedSnapshot } from "../src/core/offers/state";
+import type { TenantDb } from "../src/core/tenancy/isolation";
 import { EIGNIR_STAGES, WITHDRAWN_STAGE } from "../src/verticals/eignir/pipeline";
+import { generateSoluyfirlit } from "../src/verticals/eignir/soluyfirlit";
+import { generateContractPdf } from "../src/verticals/eignir/contracts";
 import { mediaObjectKey } from "../src/core/media/constants";
 import { createImageDerivatives } from "../src/core/media/derivatives";
 import { ensureBucket, putObject } from "../src/lib/storage";
@@ -155,8 +158,8 @@ async function main() {
   await seedM3Data(demoEignir.id, anna.id, jon.id, contactIds);
 
   // ── M4: portal publications in various states, söluyfirlit history, ───────
-  // signing requests
-  // (extended in milestone M4)
+  // signing requests, inbound leads
+  await seedM4Data(demoEignir.id, anna.id, jon.id);
 
   // ── M5: completed sale with commission record ─────────────────────────────
   // (extended in milestone M5)
@@ -1103,6 +1106,239 @@ async function seedM3Data(
     viewings.length,
     tasks.length,
   );
+}
+
+// ═══ M4 demo data ═════════════════════════════════════════════════════════
+
+async function seedM4Data(
+  tenantId: string,
+  annaId: string,
+  jonId: string,
+): Promise<void> {
+  const existing = await db.portalPublication.count({ where: { tenantId } });
+  if (existing > 0) {
+    console.log("M4 data already present (%d publications) — skipping M4 seed", existing);
+    return;
+  }
+  const now = Date.now();
+  const properties = await db.property.findMany({
+    where: { tenantId },
+    select: { fastanumer: true, listingId: true },
+  });
+  const listingByFnr = new Map(properties.map((p) => [p.fastanumer, p.listingId]));
+
+  // ── Portal publications in mixed states (SPEC §8, §13 seed) ───────────────
+  type PubSeed = {
+    fnr: string;
+    portalKey: string;
+    status: "PUBLISHED" | "NEEDS_UPDATE" | "ERROR" | "UNPUBLISHED" | "NOT_PUBLISHED";
+    enabled?: boolean;
+    lastError?: string;
+    events: Array<{ action: "PUBLISH" | "UPDATE" | "UNPUBLISH" | "PULL"; ok: boolean; message?: string; daysAgo: number }>;
+  };
+  const pubs: PubSeed[] = [
+    // Njálsgata 42 — live everywhere
+    { fnr: "F2044231", portalKey: "fasteignir", status: "PUBLISHED", events: [{ action: "PUBLISH", ok: true, daysAgo: 12 }, { action: "PULL", ok: true, message: "1 leads", daysAgo: 2 }] },
+    { fnr: "F2044231", portalKey: "mbl-fasteignir", status: "PUBLISHED", events: [{ action: "PUBLISH", ok: true, daysAgo: 12 }] },
+    { fnr: "F2044231", portalKey: "fasteignaleitin", status: "PUBLISHED", events: [{ action: "PUBLISH", ok: true, daysAgo: 12 }] },
+    // Álfheimar 24 — one portal erroring
+    { fnr: "F2098412", portalKey: "fasteignir", status: "PUBLISHED", events: [{ action: "PUBLISH", ok: true, daysAgo: 9 }] },
+    { fnr: "F2098412", portalKey: "mbl-fasteignir", status: "ERROR", lastError: "mbl.is/fasteignir: tímabundin villa (mock)", events: [{ action: "PUBLISH", ok: false, message: "mbl.is/fasteignir: tímabundin villa (mock)", daysAgo: 9 }] },
+    { fnr: "F2098412", portalKey: "fasteignaleitin", status: "PUBLISHED", events: [{ action: "PUBLISH", ok: true, daysAgo: 9 }] },
+    // Kársnesbraut 71 — published, then edited → needs update
+    { fnr: "F2015877", portalKey: "fasteignir", status: "NEEDS_UPDATE", events: [{ action: "PUBLISH", ok: true, daysAgo: 15 }] },
+    { fnr: "F2015877", portalKey: "mbl-fasteignir", status: "NEEDS_UPDATE", events: [{ action: "PUBLISH", ok: true, daysAgo: 15 }] },
+    { fnr: "F2015877", portalKey: "fasteignaleitin", status: "NOT_PUBLISHED", enabled: false, events: [] },
+    // Hafnargata 28 (Kaupsamningur) — auto-unpublished
+    { fnr: "F2063490", portalKey: "fasteignir", status: "UNPUBLISHED", events: [{ action: "PUBLISH", ok: true, daysAgo: 30 }, { action: "UNPUBLISH", ok: true, daysAgo: 20 }] },
+    { fnr: "F2063490", portalKey: "mbl-fasteignir", status: "UNPUBLISHED", events: [{ action: "PUBLISH", ok: true, daysAgo: 30 }, { action: "UNPUBLISH", ok: true, daysAgo: 20 }] },
+  ];
+  for (const pub of pubs) {
+    const listingId = listingByFnr.get(pub.fnr);
+    if (!listingId) continue;
+    const row = await db.portalPublication.create({
+      data: {
+        tenantId,
+        listingId,
+        portalKey: pub.portalKey,
+        enabled: pub.enabled ?? true,
+        status: pub.status,
+        remoteId:
+          pub.status === "PUBLISHED" || pub.status === "NEEDS_UPDATE"
+            ? `${pub.portalKey}-${listingId.slice(-6)}-seed`
+            : null,
+        lastSyncedAt: pub.events.length
+          ? new Date(now - Math.min(...pub.events.map((e) => e.daysAgo)) * DAY)
+          : null,
+        lastError: pub.lastError ?? null,
+      },
+    });
+    for (const event of pub.events) {
+      await db.portalSyncEvent.create({
+        data: {
+          tenantId,
+          publicationId: row.id,
+          action: event.action,
+          ok: event.ok,
+          message: event.message ?? null,
+          createdAt: new Date(now - event.daysAgo * DAY),
+        },
+      });
+    }
+  }
+  console.log("M4: %d portal publications seeded", pubs.length);
+
+  // ── Inbound leads flagged for review (SPEC §8) ─────────────────────────────
+  const leadSeeds = [
+    {
+      name: "Guðrún Pálsdóttir",
+      email: "gudrun.fasteignir@example.is",
+      phone: "691 2233",
+      message: "Er hægt að fá að skoða eignina í vikunni?",
+      source: "fasteignir",
+      fnr: "F2044231",
+    },
+    {
+      name: "Einar Márusson",
+      email: "einar.mbl@example.is",
+      phone: "772 8844",
+      message: "Óska eftir söluyfirliti og upplýsingum um afhendingartíma.",
+      source: "mbl-fasteignir",
+      fnr: "F2098412",
+    },
+  ];
+  for (const lead of leadSeeds) {
+    const listingId = listingByFnr.get(lead.fnr);
+    if (!listingId) continue;
+    const contact = await db.contact.create({
+      data: {
+        tenantId,
+        type: "PERSON",
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        notes: lead.message,
+        tags: ["lead"],
+        source: lead.source,
+        needsReview: true,
+      },
+    });
+    await db.listingContact.create({
+      data: { tenantId, listingId, contactId: contact.id, role: "PROSPECTIVE_BUYER" },
+    });
+  }
+  console.log("M4: %d inbound leads flagged for review", leadSeeds.length);
+
+  // ── Söluþóknun disclosure text for the söluyfirlit demo listings ──────────
+  for (const fnr of ["F2044231", "F2027781"]) {
+    const listingId = listingByFnr.get(fnr);
+    if (!listingId) continue;
+    await db.listing.update({
+      where: { id: listingId },
+      data: {
+        soluthoknunText:
+          "Söluþóknun er 2,2% af söluverði auk vsk. samkvæmt þjónustusamningi, að lágmarki 450.000 kr. auk gagnaöflunar 39.900 kr.",
+      },
+    });
+  }
+
+  // ── Söluyfirlit versions + send log (real render; skipped if storage down) ─
+  const tenantDb = db as unknown as TenantDb;
+  try {
+    const njalsgata = listingByFnr.get("F2044231")!;
+    await generateSoluyfirlit(tenantDb, tenantId, njalsgata, annaId);
+
+    const langholtsvegur = listingByFnr.get("F2027781")!;
+    await generateSoluyfirlit(tenantDb, tenantId, langholtsvegur, annaId);
+    const v2 = await generateSoluyfirlit(tenantDb, tenantId, langholtsvegur, annaId);
+    if (v2.ok) {
+      // Send log: the accepted buyer received v2 (SPEC §9 send history).
+      const buyer = await db.contact.findFirst({
+        where: { tenantId, name: "Leigufélagið Höfði hf." },
+      });
+      if (buyer) {
+        await db.soluyfirlitSend.create({
+          data: {
+            tenantId,
+            versionId: v2.versionId,
+            contactId: buyer.id,
+            sentById: annaId,
+            emailMessageId: "seed-demo",
+            createdAt: new Date(now - 9 * DAY),
+          },
+        });
+      }
+    }
+    console.log("M4: söluyfirlit v1 (Njálsgata), v1+v2 (Langholtsvegur) + send log");
+  } catch (error) {
+    console.warn("M4: storage unreachable — skipping söluyfirlit seed:", error);
+  }
+
+  // ── Signing: PARTIALLY_SIGNED kaupsamningur on Hafnargata 28 ──────────────
+  try {
+    const hafnargata = listingByFnr.get("F2063490")!;
+    const contract = await generateContractPdf(tenantDb, tenantId, hafnargata, "KAUPSAMNINGUR");
+    if (contract.ok) {
+      const [hildur, klettur] = await Promise.all([
+        db.contact.findFirst({ where: { tenantId, name: "Hildur Einarsdóttir" } }),
+        db.contact.findFirst({ where: { tenantId, name: "Byggingafélagið Klettur ehf." } }),
+      ]);
+      const request = await db.signingRequest.create({
+        data: {
+          tenantId,
+          listingId: hafnargata,
+          title: contract.title,
+          docType: "KAUPSAMNINGUR",
+          sourceKey: contract.storageKey,
+          status: "PARTIALLY_SIGNED",
+          providerRequestId: `mock-sign-seed-${randomUUID()}`,
+          createdById: jonId,
+          createdAt: new Date(now - 3 * DAY),
+        },
+      });
+      const signers = [
+        { contact: hildur, name: "Hildur Einarsdóttir", status: "SIGNED" as const },
+        { contact: klettur, name: "Byggingafélagið Klettur ehf.", status: "PENDING" as const },
+      ];
+      for (const signer of signers) {
+        await db.signingSigner.create({
+          data: {
+            tenantId,
+            requestId: request.id,
+            name: signer.name,
+            kennitala: signer.contact?.kennitala ?? makeKt("010180", "11", "9"),
+            email: signer.contact?.email ?? null,
+            phone: signer.contact?.phone ?? null,
+            providerSignerId: `mock-signer-seed-${randomUUID().slice(0, 12)}`,
+            signerLink: "/dev/signing",
+            status: signer.status,
+            signedAt: signer.status === "SIGNED" ? new Date(now - 1 * DAY) : null,
+          },
+        });
+      }
+      await db.signingEvent.create({
+        data: {
+          tenantId,
+          requestId: request.id,
+          event: "sent",
+          metadata: { signers: 2 },
+          createdAt: new Date(now - 3 * DAY),
+        },
+      });
+      await db.signingEvent.create({
+        data: {
+          tenantId,
+          requestId: request.id,
+          event: "signed",
+          metadata: { signer: "Hildur Einarsdóttir" },
+          createdAt: new Date(now - 1 * DAY),
+        },
+      });
+      console.log("M4: PARTIALLY_SIGNED kaupsamningur signing request (Hafnargata 28)");
+    }
+  } catch (error) {
+    console.warn("M4: storage unreachable — skipping signing seed:", error);
+  }
 }
 
 main()
