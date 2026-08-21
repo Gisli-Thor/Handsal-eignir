@@ -68,7 +68,7 @@ The single most important invariant: **no query crosses a tenant boundary.**
 ## Domain model (M2)
 
 - `Listing` is the **core base** (SPEC §5): stage (string key; the pipeline
-  engine lands in M3 and becomes the only writer), ásett verð (`BigInt` — ISK
+  engine in `src/core/pipeline` is the only writer), ásett verð (`BigInt` — ISK
   amounts exceed int4 for commercial property), descriptions IS/EN,
   agents/contacts/media/documents/loans relations. `Property` is the Eignir
   1:1 extension; `Vehicle` (M6) will mirror this for Bílar.
@@ -101,6 +101,53 @@ The single most important invariant: **no query crosses a tenant boundary.**
   PHOTO / FLOOR_PLAN / DOCUMENT_SCAN); PDFs and other files are
   `ListingDocument` (typed + dated, ≤50 MB). Deleting rows also deletes the
   storage objects.
+
+## Pipeline, offers, fyrirvarar & activity (M3)
+
+- **Pipeline engine** (`src/core/pipeline/engine.ts`): generic, config-driven.
+  A `PipelineConfig` (ordered stages, withdrawn side-state, guards and hooks
+  keyed by *target* stage) is built per vertical — Eignir in
+  `src/verticals/eignir/pipeline.ts`, looked up via `src/lib/pipelines.ts`
+  (same composition pattern as `services.ts`). Any distinct known stage is
+  reachable from any other; correctness is enforced by guards, not an
+  adjacency matrix. Fallið frá requires a reason. Transitions run in a
+  transaction with an optimistic stage check (concurrent moves return
+  `conflict`), write the append-only `StageTransition` history, and audit
+  `STAGE_CHANGED`. **Guards** may be `overridable` — an ADMIN bypass stores
+  the reason on the history row and audits `STAGE_GUARD_OVERRIDDEN`.
+  **Hooks** run post-commit and are best-effort (failures are reported, never
+  roll back the move) — M3 registers publishedAt/soldAt stamps; M4 adds portal
+  publish/unpublish, M5 the commission hook and plan-limit guard.
+- **Offers** (`Offer` + `OfferBuyer` + `OfferPaymentItem`): counter-offers
+  (gagntilboð) reference their parent — chains have one PENDING leaf; all
+  non-PENDING statuses are terminal (`src/core/offers/state.ts`).
+  Greiðslutilhögun line items must sum exactly to the offer amount (BigInt
+  math, validated server-side and live in the form). Multiple buyers with
+  optional ownership shares (real offers split e.g. 54/46 — see
+  examples/NOTES.md). Creating the first offer on a listing in *Í sölu*
+  auto-moves it to *Tilboð móttekið*; accepting writes an immutable
+  `acceptedSnapshot` JSON, rejects every other open offer on the listing, and
+  moves the listing forward to *Tilboð samþykkt*.
+- **Fyrirvarar**: typed conditions on an offer (added while PENDING or
+  ACCEPTED, tracked to resolution after acceptance). The Kaupsamningur guard
+  (`src/core/fyrirvarar/guard.ts`) blocks while any fyrirvari on the ACCEPTED
+  offer is PENDING/FAILED. Reminder emails to the listing's primary agent at
+  7d/2d/deadline (`src/core/fyrirvarar/reminders.ts`) — per-tier sent-stamps
+  on the row prevent duplicates; a failed send rolls the stamp back for retry.
+- **Background jobs** (`src/lib/jobs.ts`, started once per process from
+  `src/instrumentation.ts`, node runtime only): offer expiry + fyrirvari
+  reminders every 60s, cross-tenant via `unscopedDb` (documented call site).
+  In `instrumentation.ts` the dynamic import sits inside a literal
+  `NEXT_RUNTIME === "nodejs"` check so webpack drops nodemailer/Prisma from
+  the edge bundle.
+- **EmailAdapter** (`src/core/ports/email.ts`): `smtp` (nodemailer → Mailpit
+  in dev, web UI :8025) or `mock` (in-memory, used by integration tests),
+  selected via `ADAPTER_EMAIL`.
+- **Activity**: `Viewing` (+`ViewingAttendee` contacts), `ListingNote`,
+  `ListingTask` (assignee via tenant-safe composite FK). The listing detail
+  page merges stage history, offer events, viewings, notes and tasks into one
+  server-rendered timeline; the dashboard aggregates pending fyrirvarar,
+  expiring offers, upcoming viewings and open tasks.
 
 ## Auth & RBAC
 

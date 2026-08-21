@@ -26,7 +26,8 @@
     "perMonth": "á mánuði",
     "comingSoon": "Væntanlegt",
     "yes": "Já",
-    "no": "Nei"
+    "no": "Nei",
+    "delete": "Eyða"
   },
   "locale": {
     "label": "Tungumál",
@@ -67,8 +68,23 @@
   "dashboard": {
     "title": "Yfirlit",
     "welcome": "Velkomin í {vertical}",
-    "emptyTitle": "Ekkert hér ennþá",
-    "emptyBody": "Yfirlitið fyllist af sölupípu, tilboðum og verkefnum þegar fyrstu eignirnar eru skráðar."
+    "panels": {
+      "fyrirvarar": "Opnir fyrirvarar",
+      "fyrirvararEmpty": "Engir opnir fyrirvarar.",
+      "expiringOffers": "Tilboð að renna út",
+      "expiringOffersEmpty": "Engin tilboð að renna út á næstunni.",
+      "viewings": "Skoðanir og opin hús framundan",
+      "viewingsEmpty": "Engar skoðanir á næstu 14 dögum.",
+      "tasks": "Opin verkefni",
+      "tasksEmpty": "Engin opin verkefni."
+    },
+    "overdueDays": "{days} d. fram yfir",
+    "daysLeft": "{days} d. eftir",
+    "expired": "Útrunnið",
+    "viewingKind": {
+      "SKODUN": "Skoðun",
+      "OPID_HUS": "Opið hús"
+    }
   },
   "settings": {
     "title": "Stillingar",
@@ -187,7 +203,14 @@
       "documents": "Skjöl",
       "parties": "Aðilar",
       "agents": "Sölumenn",
-      "loans": "Áhvílandi lán"
+      "loans": "Áhvílandi lán",
+      "pipeline": "Sölupípa",
+      "offers": "Tilboð",
+      "fyrirvarar": "Fyrirvarar",
+      "viewings": "Skoðanir og opin hús",
+      "tasks": "Verkefni",
+      "notes": "Minnispunktar",
+      "timeline": "Atburðasaga"
     },
     "fields": {
       "gotuheiti": "Götuheiti",
@@ -284,6 +307,184 @@
         "invalid": "Athugaðu innslátt — lánveitandi og eftirstöðvar eru nauðsynleg."
       }
     }
+  },
+  "pipeline": {
+    "moveTo": "Færa í {stage}",
+    "moved": "Eign færð í {stage}.",
+    "withdraw": "Fallið frá",
+    "withdrawTitle": "Fallið frá sölu?",
+    "withdrawBody": "Eignin fer í stöðuna „Fallið frá“. Skráðu ástæðu — hún vistast í atburðasögu.",
+    "withdrawConfirm": "Staðfesta",
+    "reactivate": "Endurvirkja",
+    "reason": "Ástæða",
+    "reasonRequired": "Ástæðu vantar.",
+    "conflict": "Staða eignarinnar breyttist á meðan — reyndu aftur.",
+    "overrideTitle": "Fyrirvarar enn opnir",
+    "overrideBody": "Sem stjórnandi getur þú fært eignina áfram þrátt fyrir það. Skráðu ástæðu — hún er vistuð í aðgerðaskrá.",
+    "overrideConfirm": "Færa samt",
+    "guards": {
+      "fyrirvararOpen": "Ekki er hægt að færa í Kaupsamning: fyrirvarar á samþykktu tilboði eru enn opnir."
+    }
+  },
+  "offers": {
+    "pageTitle": "Tilboð",
+    "pageSubtitle": "Öll tilboð og gagntilboð yfir allar eignir",
+    "emptyAll": "Engin tilboð skráð ennþá.",
+    "columns": {
+      "listing": "Eign",
+      "kind": "Tegund",
+      "buyers": "Tilboðsgjafi",
+      "amount": "Fjárhæð",
+      "status": "Staða",
+      "gildistimi": "Gildistími"
+    },
+    "empty": "Engin tilboð hafa borist í þessa eign.",
+    "new": "Skrá tilboð",
+    "kind": {
+      "KAUPTILBOD": "Kauptilboð",
+      "GAGNTILBOD": "Gagntilboð"
+    },
+    "status": {
+      "PENDING": "Í gildi",
+      "ACCEPTED": "Samþykkt",
+      "REJECTED": "Hafnað",
+      "COUNTERED": "Gagntilboð gert",
+      "EXPIRED": "Útrunnið",
+      "WITHDRAWN": "Dregið til baka"
+    },
+    "buyersLine": "Tilboðsgjafi: {buyers}",
+    "gildistimi": "Gildistími",
+    "afhending": "Afhending",
+    "received": "Skráð",
+    "paymentSchedule": "Greiðslutilhögun",
+    "expiringSoon": "Rennur út fljótlega",
+    "accept": "Samþykkja",
+    "reject": "Hafna",
+    "withdraw": "Draga til baka",
+    "counter": "Gagntilboð",
+    "errors": {
+      "notPending": "Tilboðið er ekki lengur í gildi."
+    },
+    "form": {
+      "title": "Skrá kauptilboð",
+      "counterTitle": "Skrá gagntilboð",
+      "counterBody": "Gagntilboð við tilboði upp á {amount}. Tilboðsgjafar haldast óbreyttir; fyrra tilboðið lokast.",
+      "amount": "Fjárhæð (kr.)",
+      "gildistimi": "Gildistími (dags. og kl.)",
+      "afhending": "Afhendingardagur",
+      "buyers": "Tilboðsgjafar (kaupendur)",
+      "buyer": "Tengiliður",
+      "sharePct": "Hlutfall %",
+      "selectContact": "Veldu tengilið",
+      "addBuyer": "Bæta við kaupanda",
+      "paymentSchedule": "Greiðslutilhögun",
+      "itemDescription": "Lýsing greiðslu",
+      "itemPlaceholder": "t.d. Greitt við undirritun kaupsamnings",
+      "itemAmount": "Fjárhæð (kr.)",
+      "itemDueDate": "Gjalddagi",
+      "addItem": "Bæta við greiðslu",
+      "sumMatches": "Greiðslur stemma við fjárhæð ✓",
+      "sumDiff": "Munar {diff}",
+      "terms": "Skilmálar / annað",
+      "submit": "Skrá tilboð",
+      "submitCounter": "Skrá gagntilboð",
+      "errors": {
+        "buyersRequired": "Veldu að minnsta kosti einn kaupanda.",
+        "paymentEmpty": "Skráðu að minnsta kosti eina greiðslu.",
+        "paymentNonPositive": "Allar greiðslur þurfa að vera hærri en 0 kr.",
+        "paymentSumMismatch": "Greiðslutilhögun stemmir ekki við fjárhæð tilboðsins.",
+        "gildistimiPast": "Gildistími þarf að vera fram í tímann.",
+        "parentClosed": "Fyrra tilboðið er ekki lengur í gildi."
+      }
+    }
+  },
+  "fyrirvarar": {
+    "empty": "Engir fyrirvarar skráðir.",
+    "typeLabel": "Tegund",
+    "type": {
+      "FJARMOGNUN": "Fjármögnun",
+      "SALA_EIGIN_EIGNAR": "Sala eigin eignar",
+      "ASTANDSSKODUN": "Ástandsskoðun",
+      "SAMTHYKKI_STJORNAR": "Samþykki stjórnar",
+      "ANNAD": "Annað"
+    },
+    "description": "Lýsing",
+    "deadline": "Frestur",
+    "responsibleLabel": "Ábyrgð",
+    "responsible": {
+      "BUYER": "Kaupandi",
+      "SELLER": "Seljandi"
+    },
+    "status": {
+      "PENDING": "Opinn",
+      "FULFILLED": "Uppfylltur",
+      "WAIVED": "Felldur niður",
+      "FAILED": "Brást"
+    },
+    "daysLeft": "{days} dagar eftir",
+    "overdue": "{days} d. fram yfir frest",
+    "resolvedLine": "{status} — {by}, {at}",
+    "fulfill": "Uppfylltur",
+    "waive": "Fella niður",
+    "fail": "Brást",
+    "reopen": "Opna aftur",
+    "add": "Bæta við",
+    "failedPrompt": "Fyrirvari brást. Hvað á að gera við eignina?",
+    "backToSale": "Aftur í sölu",
+    "markWithdrawn": "Fallið frá",
+    "failedReason": "Fyrirvari á samþykktu tilboði brást",
+    "errors": {
+      "invalid": "Athugaðu innslátt — lýsing og frestur eru nauðsynleg."
+    }
+  },
+  "activity": {
+    "viewings": {
+      "empty": "Engar skoðanir skráðar.",
+      "kindLabel": "Tegund",
+      "kind": {
+        "SKODUN": "Skoðun",
+        "OPID_HUS": "Opið hús"
+      },
+      "startsAt": "Hefst",
+      "endsAt": "Lýkur",
+      "attendees": "Gestir",
+      "attendeeLabel": "Gestir (veldu tengiliði)",
+      "note": "Athugasemd",
+      "add": "Skrá skoðun",
+      "upcoming": "Framundan",
+      "errors": {
+        "invalid": "Athugaðu innslátt — tímasetning er nauðsynleg."
+      }
+    },
+    "tasks": {
+      "empty": "Engin verkefni skráð.",
+      "title": "Verkefni",
+      "due": "Skiladagur",
+      "assignee": "Ábyrgðaraðili",
+      "unassigned": "Enginn valinn",
+      "add": "Bæta við",
+      "errors": {
+        "invalid": "Athugaðu innslátt — heiti verkefnis vantar."
+      }
+    },
+    "notes": {
+      "empty": "Engir minnispunktar.",
+      "newNote": "Nýr minnispunktur",
+      "add": "Vista"
+    }
+  },
+  "timeline": {
+    "empty": "Engir atburðir ennþá.",
+    "overridden": "framhjá fyrirvörum",
+    "offerCreated": "{kind} skráð — {amount}",
+    "offerDecided": "Tilboð: {status} — {amount}",
+    "viewing": "{kind}",
+    "viewingKind": {
+      "SKODUN": "Skoðun",
+      "OPID_HUS": "Opið hús"
+    },
+    "noteAdded": "Minnispunktur skráður",
+    "taskAdded": "Verkefni stofnað: {title}"
   },
   "admin": {
     "title": "Handsal stjórnborð",

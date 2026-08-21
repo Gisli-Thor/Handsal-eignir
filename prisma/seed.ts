@@ -20,6 +20,8 @@ import type {
   PropertyType,
 } from "../src/generated/prisma/enums";
 import { kennitalaCheckDigit } from "../src/core/contacts/kennitala";
+import { buildAcceptedSnapshot } from "../src/core/offers/state";
+import { EIGNIR_STAGES, WITHDRAWN_STAGE } from "../src/verticals/eignir/pipeline";
 import { mediaObjectKey } from "../src/core/media/constants";
 import { createImageDerivatives } from "../src/core/media/derivatives";
 import { ensureBucket, putObject } from "../src/lib/storage";
@@ -146,11 +148,11 @@ async function main() {
   console.log("Postal codes: %d upserted", POSTAL_CODES.length);
 
   // ── M2: contacts + 12 demo properties ─────────────────────────────────────
-  await seedEignirDemoData(demoEignir.id, anna.id, jon.id);
+  const contactIds = await seedEignirDemoData(demoEignir.id, anna.id, jon.id);
 
   // ── M3: pipeline stage history, offers + counter-offer chain, accepted ────
-  // offer with mixed-status fyrirvarar, viewings/opið hús, tasks
-  // (extended in milestone M3)
+  // offer with mixed-status fyrirvarar, viewings/opið hús, notes, tasks
+  await seedM3Data(demoEignir.id, anna.id, jon.id, contactIds);
 
   // ── M4: portal publications in various states, söluyfirlit history, ───────
   // signing requests
@@ -437,7 +439,7 @@ async function seedEignirDemoData(
   tenantId: string,
   annaId: string,
   jonId: string,
-): Promise<void> {
+): Promise<string[]> {
   // Contacts — idempotent: upsert by (tenantId, kennitala), name-match otherwise.
   const contactIds: string[] = [];
   for (const contact of CONTACTS) {
@@ -471,7 +473,7 @@ async function seedEignirDemoData(
   const existing = await db.listing.count({ where: { tenantId } });
   if (existing > 0) {
     console.log("Listings already present (%d) — skipping listing seed", existing);
-    return;
+    return contactIds;
   }
 
   let storageUp = true;
@@ -609,6 +611,497 @@ async function seedEignirDemoData(
     "Listings: %d created across all pipeline stages%s",
     PROPERTIES.length,
     storageUp ? " (with placeholder photos)" : "",
+  );
+  return contactIds;
+}
+
+// ═══ M3 demo data ═════════════════════════════════════════════════════════
+
+const DAY = 24 * 60 * 60 * 1000;
+
+async function seedM3Data(
+  tenantId: string,
+  annaId: string,
+  jonId: string,
+  contactIds: string[],
+): Promise<void> {
+  // Idempotent: skip when offers already exist for the tenant.
+  const existing = await db.offer.count({ where: { tenantId } });
+  if (existing > 0) {
+    console.log("M3 data already present (%d offers) — skipping M3 seed", existing);
+    return;
+  }
+  const now = Date.now();
+
+  // Listings by fastanúmer (created by the M2 seed).
+  const properties = await db.property.findMany({
+    where: { tenantId },
+    select: { fastanumer: true, listingId: true },
+  });
+  const listingByFnr = new Map(properties.map((p) => [p.fastanumer, p.listingId]));
+  const listings = await db.listing.findMany({
+    where: { tenantId },
+    select: { id: true, stage: true, createdAt: true },
+  });
+
+  // ── Stage history: synthesize the walk from Undirbúningur to each ─────────
+  // listing's current stage (SPEC §6 full history with timestamps + actor).
+  for (const listing of listings) {
+    const agent = await db.listingAgent.findFirst({
+      where: { listingId: listing.id, isPrimary: true },
+      select: { userId: true },
+    });
+    const actorUserId = agent?.userId ?? annaId;
+    const path =
+      listing.stage === WITHDRAWN_STAGE
+        ? [EIGNIR_STAGES[0], WITHDRAWN_STAGE]
+        : EIGNIR_STAGES.slice(
+            0,
+            Math.max(1, EIGNIR_STAGES.indexOf(listing.stage as never) + 1),
+          );
+    const start = Math.min(listing.createdAt.getTime(), now - path.length * 6 * DAY);
+    for (let step = 0; step < path.length; step += 1) {
+      await db.stageTransition.create({
+        data: {
+          tenantId,
+          listingId: listing.id,
+          fromStage: step === 0 ? null : path[step - 1],
+          toStage: path[step],
+          actorUserId,
+          reason:
+            path[step] === WITHDRAWN_STAGE
+              ? "Seljandi frestaði flutningum erlendis"
+              : null,
+          createdAt: new Date(start + step * 6 * DAY),
+        },
+      });
+    }
+  }
+
+  // ── Offers ─────────────────────────────────────────────────────────────────
+  const isk = (millions: number) => BigInt(Math.round(millions * 1_000_000));
+
+  async function createOffer(input: {
+    listingId: string;
+    parentId?: string;
+    amountMISK: number;
+    gildistimi: Date;
+    afhendingDate?: Date;
+    status: "PENDING" | "ACCEPTED" | "REJECTED" | "COUNTERED" | "EXPIRED" | "WITHDRAWN";
+    createdById: string;
+    decidedById?: string;
+    createdAt: Date;
+    decidedAt?: Date;
+    terms?: string;
+    buyers: Array<{ contactId: string; name: string; sharePct?: number }>;
+    payments: Array<{ description: string; amountMISK: number; dueDate?: Date }>;
+  }): Promise<string> {
+    const amountISK = isk(input.amountMISK);
+    const paymentItems = input.payments.map((payment, index) => ({
+      description: payment.description,
+      amountISK: isk(payment.amountMISK),
+      dueDate: payment.dueDate ?? null,
+      sortOrder: index,
+    }));
+    const snapshot =
+      input.status === "ACCEPTED"
+        ? (buildAcceptedSnapshot({
+            amountISK,
+            afhendingDate: input.afhendingDate ?? null,
+            gildistimi: input.gildistimi,
+            terms: input.terms ?? null,
+            buyers: input.buyers.map((buyer) => ({
+              contactId: buyer.contactId,
+              name: buyer.name,
+              sharePct: buyer.sharePct ?? null,
+            })),
+            paymentItems,
+          }) as object)
+        : undefined;
+    const offer = await db.offer.create({
+      data: {
+        tenantId,
+        listingId: input.listingId,
+        parentId: input.parentId ?? null,
+        amountISK,
+        gildistimi: input.gildistimi,
+        afhendingDate: input.afhendingDate ?? null,
+        terms: input.terms ?? null,
+        status: input.status,
+        createdById: input.createdById,
+        decidedById: input.decidedAt ? (input.decidedById ?? input.createdById) : null,
+        decidedAt: input.decidedAt ?? null,
+        acceptedSnapshot: snapshot,
+        createdAt: input.createdAt,
+      },
+    });
+    for (const buyer of input.buyers) {
+      await db.offerBuyer.create({
+        data: {
+          tenantId,
+          offerId: offer.id,
+          contactId: buyer.contactId,
+          sharePct: buyer.sharePct ?? null,
+        },
+      });
+    }
+    for (const item of paymentItems) {
+      await db.offerPaymentItem.create({ data: { tenantId, offerId: offer.id, ...item } });
+    }
+    return offer.id;
+  }
+
+  const contact = (index: number, name: string, sharePct?: number) => ({
+    contactId: contactIds[index],
+    name,
+    sharePct,
+  });
+
+  // Grettisgata 17 (Tilboð móttekið): live negotiation — kauptilboð countered
+  // by a gagntilboð that is still open and expires soon (dashboard demo).
+  const grettisgata = listingByFnr.get("F2052366")!;
+  const grettisgataRoot = await createOffer({
+    listingId: grettisgata,
+    amountMISK: 47.5,
+    gildistimi: new Date(now - 1 * DAY),
+    afhendingDate: new Date(now + 60 * DAY),
+    status: "COUNTERED",
+    createdById: jonId,
+    decidedAt: new Date(now - 2 * DAY),
+    createdAt: new Date(now - 4 * DAY),
+    buyers: [contact(3, "Hildur Einarsdóttir")],
+    payments: [
+      { description: "Greitt við undirritun kaupsamnings", amountMISK: 5.0 },
+      { description: "Greitt með veðláni frá lánastofnun", amountMISK: 38.0 },
+      { description: "Greitt við afsal", amountMISK: 4.5 },
+    ],
+    terms: "Kaupandi gerir fyrirvara um greiðslumat.",
+  });
+  await createOffer({
+    listingId: grettisgata,
+    parentId: grettisgataRoot,
+    amountMISK: 49.4,
+    gildistimi: new Date(now + 1.5 * DAY),
+    afhendingDate: new Date(now + 60 * DAY),
+    status: "PENDING",
+    createdById: jonId,
+    createdAt: new Date(now - 2 * DAY),
+    buyers: [contact(3, "Hildur Einarsdóttir")],
+    payments: [
+      { description: "Greitt við undirritun kaupsamnings", amountMISK: 6.0 },
+      { description: "Greitt með veðláni frá lánastofnun", amountMISK: 38.0 },
+      { description: "Greitt við afsal", amountMISK: 5.4 },
+    ],
+    terms: "Gagntilboð seljanda — aðrir skilmálar óbreyttir.",
+  });
+
+  // Langholtsvegur 130 (Tilboð samþykkt): full chain ending in an accepted
+  // offer with mixed-status fyrirvarar (SPEC §13 seed requirement).
+  const langholtsvegur = listingByFnr.get("F2027781")!;
+  const lhRoot = await createOffer({
+    listingId: langholtsvegur,
+    amountMISK: 82.0,
+    gildistimi: new Date(now - 9 * DAY),
+    status: "COUNTERED",
+    createdById: annaId,
+    decidedAt: new Date(now - 10 * DAY),
+    createdAt: new Date(now - 11 * DAY),
+    buyers: [contact(7, "Leigufélagið Höfði hf.")],
+    payments: [
+      { description: "Greitt við undirritun kaupsamnings", amountMISK: 20.0 },
+      { description: "Greitt við afhendingu", amountMISK: 62.0 },
+    ],
+  });
+  const lhCounter = await createOffer({
+    listingId: langholtsvegur,
+    parentId: lhRoot,
+    amountMISK: 84.5,
+    gildistimi: new Date(now - 8 * DAY),
+    status: "COUNTERED",
+    createdById: annaId,
+    decidedAt: new Date(now - 8.5 * DAY),
+    createdAt: new Date(now - 10 * DAY),
+    buyers: [contact(7, "Leigufélagið Höfði hf.")],
+    payments: [
+      { description: "Greitt við undirritun kaupsamnings", amountMISK: 25.0 },
+      { description: "Greitt við afhendingu", amountMISK: 59.5 },
+    ],
+  });
+  const lhAccepted = await createOffer({
+    listingId: langholtsvegur,
+    parentId: lhCounter,
+    amountMISK: 83.5,
+    gildistimi: new Date(now - 7 * DAY),
+    afhendingDate: new Date(now + 45 * DAY),
+    status: "ACCEPTED",
+    createdById: annaId,
+    decidedById: annaId,
+    decidedAt: new Date(now - 7.5 * DAY),
+    createdAt: new Date(now - 8 * DAY),
+    buyers: [contact(7, "Leigufélagið Höfði hf.")],
+    payments: [
+      { description: "Greitt við undirritun kaupsamnings", amountMISK: 22.0 },
+      {
+        description: "Greitt með veðláni frá lánastofnun",
+        amountMISK: 55.0,
+        dueDate: new Date(now + 45 * DAY),
+      },
+      {
+        description: "Greitt við afsal og lokauppgjör",
+        amountMISK: 6.5,
+        dueDate: new Date(now + 90 * DAY),
+      },
+    ],
+    terms: "Samþykkt með fyrirvörum um fjármögnun og ástandsskoðun.",
+  });
+
+  const fyrirvarar: Array<{
+    type: "FJARMOGNUN" | "SALA_EIGIN_EIGNAR" | "ASTANDSSKODUN" | "SAMTHYKKI_STJORNAR" | "ANNAD";
+    description: string;
+    deadline: Date;
+    responsible: "BUYER" | "SELLER";
+    status: "PENDING" | "FULFILLED" | "WAIVED" | "FAILED";
+    resolved?: boolean;
+  }> = [
+    {
+      type: "FJARMOGNUN",
+      description: "Kaupandi skili greiðslumati frá viðurkenndri lánastofnun.",
+      deadline: new Date(now + 5 * DAY),
+      responsible: "BUYER",
+      status: "PENDING",
+    },
+    {
+      type: "ASTANDSSKODUN",
+      description: "Ástandsskoðun óháðs matsmanns án athugasemda.",
+      deadline: new Date(now - 2 * DAY),
+      responsible: "BUYER",
+      status: "FULFILLED",
+      resolved: true,
+    },
+    {
+      type: "SAMTHYKKI_STJORNAR",
+      description: "Samþykki stjórnar Leigufélagsins Höfða fyrir kaupunum.",
+      deadline: new Date(now + 12 * DAY),
+      responsible: "BUYER",
+      status: "PENDING",
+    },
+    {
+      type: "ANNAD",
+      description: "Seljandi fjarlægi geymsluskúr af lóð fyrir afhendingu.",
+      deadline: new Date(now - 4 * DAY),
+      responsible: "SELLER",
+      status: "WAIVED",
+      resolved: true,
+    },
+  ];
+  for (const fyrirvari of fyrirvarar) {
+    await db.fyrirvari.create({
+      data: {
+        tenantId,
+        offerId: lhAccepted,
+        type: fyrirvari.type,
+        description: fyrirvari.description,
+        deadline: fyrirvari.deadline,
+        responsible: fyrirvari.responsible,
+        status: fyrirvari.status,
+        resolvedById: fyrirvari.resolved ? annaId : null,
+        resolvedAt: fyrirvari.resolved ? new Date(now - 1 * DAY) : null,
+      },
+    });
+  }
+
+  // Hafnargata 28 (Kaupsamningur): accepted offer, conditions all closed.
+  const hafnargata = listingByFnr.get("F2063490")!;
+  const hgAccepted = await createOffer({
+    listingId: hafnargata,
+    amountMISK: 61.8,
+    gildistimi: new Date(now - 20 * DAY),
+    afhendingDate: new Date(now + 10 * DAY),
+    status: "ACCEPTED",
+    createdById: jonId,
+    decidedById: jonId,
+    decidedAt: new Date(now - 19 * DAY),
+    createdAt: new Date(now - 21 * DAY),
+    buyers: [
+      contact(3, "Hildur Einarsdóttir", 50),
+      contact(6, "Anna María Guðjónsdóttir", 50),
+    ],
+    payments: [
+      { description: "Greitt við undirritun kaupsamnings", amountMISK: 10.0 },
+      { description: "Greitt með veðláni frá lánastofnun", amountMISK: 47.0 },
+      { description: "Greitt við afsal", amountMISK: 4.8 },
+    ],
+  });
+  await db.fyrirvari.create({
+    data: {
+      tenantId,
+      offerId: hgAccepted,
+      type: "FJARMOGNUN",
+      description: "Greiðslumat kaupenda.",
+      deadline: new Date(now - 15 * DAY),
+      responsible: "BUYER",
+      status: "FULFILLED",
+      resolvedById: jonId,
+      resolvedAt: new Date(now - 16 * DAY),
+    },
+  });
+
+  // Heiðarvegur 5 (Afsal/Lokið): the completed sale.
+  await createOffer({
+    listingId: listingByFnr.get("F2012348")!,
+    amountMISK: 57.5,
+    gildistimi: new Date(now - 40 * DAY),
+    afhendingDate: new Date(now - 12 * DAY),
+    status: "ACCEPTED",
+    createdById: jonId,
+    decidedById: annaId,
+    decidedAt: new Date(now - 39 * DAY),
+    createdAt: new Date(now - 41 * DAY),
+    buyers: [contact(1, "Þorsteinn Bjarnason")],
+    payments: [
+      { description: "Greitt við undirritun kaupsamnings", amountMISK: 8.0 },
+      { description: "Greitt með veðláni frá lánastofnun", amountMISK: 45.0 },
+      { description: "Greitt við afsal", amountMISK: 4.5 },
+    ],
+  });
+
+  // ── Viewings, notes, tasks ─────────────────────────────────────────────────
+  const njalsgata = listingByFnr.get("F2044231")!;
+  const karsnesbraut = listingByFnr.get("F2015877")!;
+  const viewings: Array<{
+    listingId: string;
+    kind: "SKODUN" | "OPID_HUS";
+    startsAt: Date;
+    endsAt?: Date;
+    note?: string;
+    attendees: number[];
+    createdById: string;
+  }> = [
+    {
+      listingId: njalsgata,
+      kind: "OPID_HUS",
+      startsAt: new Date(now + 2 * DAY),
+      endsAt: new Date(now + 2 * DAY + 45 * 60 * 1000),
+      note: "Auglýst á samfélagsmiðlum.",
+      attendees: [],
+      createdById: annaId,
+    },
+    {
+      listingId: karsnesbraut,
+      kind: "SKODUN",
+      startsAt: new Date(now + 4 * DAY),
+      attendees: [2],
+      createdById: annaId,
+    },
+    {
+      listingId: grettisgata,
+      kind: "SKODUN",
+      startsAt: new Date(now - 6 * DAY),
+      note: "Kaupandi mjög áhugasamur, spurði um lagnir.",
+      attendees: [3, 6],
+      createdById: jonId,
+    },
+  ];
+  for (const viewing of viewings) {
+    const row = await db.viewing.create({
+      data: {
+        tenantId,
+        listingId: viewing.listingId,
+        kind: viewing.kind,
+        startsAt: viewing.startsAt,
+        endsAt: viewing.endsAt ?? null,
+        note: viewing.note ?? null,
+        createdById: viewing.createdById,
+      },
+    });
+    for (const index of viewing.attendees) {
+      await db.viewingAttendee.create({
+        data: { tenantId, viewingId: row.id, contactId: contactIds[index] },
+      });
+    }
+  }
+
+  await db.listingNote.create({
+    data: {
+      tenantId,
+      listingId: langholtsvegur,
+      body: "Stjórnarfundur Höfða er 15. hvers mánaðar — samþykki ætti að liggja fyrir þá.",
+      createdById: annaId,
+      createdAt: new Date(now - 5 * DAY),
+    },
+  });
+  await db.listingNote.create({
+    data: {
+      tenantId,
+      listingId: njalsgata,
+      body: "Seljandi vill helst afhenda eftir 1. desember.",
+      createdById: annaId,
+      createdAt: new Date(now - 20 * DAY),
+    },
+  });
+
+  const tasks: Array<{
+    listingId: string;
+    title: string;
+    dueDate?: Date;
+    assigneeUserId?: string;
+    completedAt?: Date;
+    createdById: string;
+  }> = [
+    {
+      listingId: langholtsvegur,
+      title: "Minna kaupanda á greiðslumat",
+      dueDate: new Date(now + 3 * DAY),
+      assigneeUserId: annaId,
+      createdById: annaId,
+    },
+    {
+      listingId: grettisgata,
+      title: "Fylgja gagntilboði eftir við kaupanda",
+      dueDate: new Date(now + 1 * DAY),
+      assigneeUserId: jonId,
+      createdById: jonId,
+    },
+    {
+      listingId: listingByFnr.get("F2081920")!,
+      title: "Panta ljósmyndara",
+      dueDate: new Date(now - 2 * DAY),
+      assigneeUserId: annaId,
+      createdById: annaId,
+    },
+    {
+      listingId: hafnargata,
+      title: "Bóka afhendingu og lyklaskil",
+      dueDate: new Date(now + 9 * DAY),
+      assigneeUserId: jonId,
+      createdById: jonId,
+    },
+    {
+      listingId: njalsgata,
+      title: "Setja upp opið hús skilti",
+      completedAt: new Date(now - 1 * DAY),
+      createdById: annaId,
+    },
+  ];
+  for (const task of tasks) {
+    await db.listingTask.create({
+      data: {
+        tenantId,
+        listingId: task.listingId,
+        title: task.title,
+        dueDate: task.dueDate ?? null,
+        assigneeUserId: task.assigneeUserId ?? null,
+        completedAt: task.completedAt ?? null,
+        createdById: task.createdById,
+      },
+    });
+  }
+
+  console.log(
+    "M3: stage history, %d offer chains (1 accepted with mixed fyrirvarar), %d viewings, %d tasks",
+    4,
+    viewings.length,
+    tasks.length,
   );
 }
 

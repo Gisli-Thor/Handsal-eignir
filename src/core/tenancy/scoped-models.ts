@@ -22,6 +22,16 @@ export const TENANT_SCOPED_MODELS = {
   EncumbranceLoan: {},
   MediaAsset: {},
   ListingDocument: {},
+  // M3 — pipeline, offers, fyrirvarar, activity
+  StageTransition: { appendOnly: true },
+  Offer: {},
+  OfferBuyer: {},
+  OfferPaymentItem: {},
+  Fyrirvari: {},
+  Viewing: {},
+  ViewingAttendee: {},
+  ListingNote: {},
+  ListingTask: {},
 } as const satisfies Record<string, { appendOnly?: boolean }>;
 
 export type TenantScopedModel = keyof typeof TENANT_SCOPED_MODELS;

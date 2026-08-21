@@ -97,7 +97,82 @@ Decisions (M2 so far):
 6. **Áhvílandi lán on Listing** (not Property) so the Bílar vertical reuses the same structure (SPEC §5 "same structure").
 7. **Storage keys embed tenant**: `tenants/{tenantId}/listings/{listingId}/…`, always derived server-side; browser never controls keys. Signed GET URLs generated per render, plain `<img>` (next/image would cache expired signed URLs).
 
-## M3 — Pipeline, offers, fyrirvarar ☐ (next)
+## M3 — Pipeline, offers, fyrirvarar ✅ (2026-08-21)
+
+Completed:
+
+- [x] Schema (migration `20260821104939_m3_pipeline_offers_fyrirvarar_activity`):
+  `StageTransition` (append-only), `Offer` (self-relation chain) /
+  `OfferBuyer` (share %) / `OfferPaymentItem`, `Fyrirvari` (+ reminder stamps),
+  `Viewing`/`ViewingAttendee`, `ListingNote`, `ListingTask` — all with
+  composite tenant-safe FKs; scoped-model registry + audit actions extended
+- [x] Core pipeline engine (`src/core/pipeline`): config-driven stages, guards
+  keyed by target stage (overridable → ADMIN bypass with logged reason),
+  post-commit best-effort hooks, transactional stage change with optimistic
+  concurrency (conflict result), append-only history, STAGE_CHANGED /
+  STAGE_GUARD_OVERRIDDEN audit; Eignir config (`verticals/eignir/pipeline.ts`)
+  with publishedAt/soldAt stamp hooks; `lib/pipelines.ts` lookup
+- [x] Offers: chain state machine + greiðslutilhögun sum validation (BigInt) in
+  `core/offers/state.ts`; create (kauptilboð/gagntilboð, multi-buyer with
+  hlutfall, payment line items with live sum check, gildistími date+time),
+  accept (immutable snapshot, closes competing offers, stage move), reject/
+  withdraw; first offer on Í sölu auto-moves to Tilboð móttekið; expiry job
+- [x] Fyrirvarar: typed conditions, Kaupsamningur guard (blocks agents, ADMIN
+  override dialog), color-coded deadline panel (green/amber/red per SPEC),
+  resolve/waive/fail/reopen with resolved-by+at, FAILED fallback prompt
+  (Í sölu / Fallið frá), reminder emails 7d/2d/due with per-tier idempotent
+  stamps (rollback on send failure)
+- [x] EmailAdapter port + SMTP (nodemailer → Mailpit) and mock adapters;
+  in-process job scheduler (60s) via `src/instrumentation.ts` (node-only)
+- [x] Activity: viewings/opið hús with contact attendees, notes, tasks
+  (due date, assignee, complete toggle); unified server-rendered timeline
+  merging stage history + offer events + viewings + notes + tasks
+- [x] UI: Sölupípa stepper with click-to-move + Fallið frá reason dialog +
+  reactivate; offers thread (indented chains); /offers overview page (nav
+  unlocked); dashboard panels (pending fyrirvarar by deadline, offers
+  expiring soon, upcoming viewings, open tasks); full is/en catalogs
+- [x] M3 seed: stage history for all 12 listings, 4 offer chains (live
+  negotiation expiring <48h, 3-deep chain → accepted with 4 mixed-status
+  fyrirvarar, closed sale), viewings/notes/tasks incl. one overdue task
+- [x] Tests: 21 new unit tests (engine, offer state machine + payment
+  validation incl. >MAX_SAFE_INTEGER, guard) and 11 new integration tests
+  (engine on real Postgres incl. guard override + append-only history,
+  composite-FK isolation for all new models, expiry job, reminder job with
+  mock email). Totals: **56 unit + 41 integration, all green**
+- [x] Verified live in browser: dashboard panels, stepper, guard block +
+  ADMIN override dialog, offer chains, fyrirvarar colors, timeline, /offers;
+  reminder job sent a real email through Mailpit on schedule
+- [x] README demo flows (M3), ARCHITECTURE.md section, this file
+
+Decisions (M3):
+
+1. **Free stage movement, guard-enforced correctness**: any distinct known
+   stage is reachable (real workflows skip/revisit stages); guards on the
+   target stage carry the rules (fyrirvarar → Kaupsamningur now; plan limit →
+   Í sölu in M5). Fallið frá requires a reason; reactivation → Undirbúningur
+   (via stepper any stage is reachable afterwards).
+2. **Hooks are post-commit and best-effort** — a portal failure (M4) must
+   never roll back a stage change; hook errors are surfaced to the caller.
+3. **First offer on a listing in Í sölu auto-moves it to Tilboð móttekið**
+   (system transition, recorded like any other).
+4. **Accepting an offer closes every other open offer on the listing**, not
+   just the same chain — the property is under an accepted offer either way.
+5. **Fyrirvarar attach to the offer** (addable while PENDING or ACCEPTED —
+   they are agreed in the offer itself, per the legacy-system examples) and
+   are tracked to resolution after acceptance; the guard only counts the
+   ACCEPTED offer's open ones.
+6. **Multiple buyers with hlutfall (%)** on offers, from examples/NOTES.md
+   (real offers split ownership); counters inherit the parent's buyers.
+7. **Reminder idempotency via per-tier stamps on the row**; a more urgent
+   tier also stamps milder ones (an overdue fyrirvari found late → one email).
+8. **Jobs are in-process** (SPEC-sanctioned for MVP): 60s interval started
+   from instrumentation.ts, node runtime only, cross-tenant via unscopedDb.
+
+### M3 verification (2026-08-21)
+
+Typecheck, lint, 56 unit + 41 integration tests, production build all green.
+Browser smoke test passed end-to-end, including a live reminder email landing
+in Mailpit from the running scheduler.
 
 ## M4 — Portals, söluyfirlit, e-signing ☐
 

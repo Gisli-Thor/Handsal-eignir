@@ -32,6 +32,19 @@ export const AUDIT_ACTIONS = [
   "MEDIA_DELETED",
   "DOCUMENT_UPLOADED",
   "DOCUMENT_DELETED",
+  // M3 — pipeline (SPEC §13: stage transitions + fyrirvarar overrides audited)
+  "STAGE_CHANGED",
+  "STAGE_GUARD_OVERRIDDEN",
+  // M3 — offers
+  "OFFER_CREATED",
+  "OFFER_ACCEPTED",
+  "OFFER_REJECTED",
+  "OFFER_WITHDRAWN",
+  "OFFER_EXPIRED",
+  // M3 — fyrirvarar
+  "FYRIRVARI_CREATED",
+  "FYRIRVARI_RESOLVED",
+  "FYRIRVARI_DELETED",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

@@ -26,7 +26,8 @@
     "perMonth": "per month",
     "comingSoon": "Coming soon",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "delete": "Delete"
   },
   "locale": {
     "label": "Language",
@@ -67,8 +68,23 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome to {vertical}",
-    "emptyTitle": "Nothing here yet",
-    "emptyBody": "The dashboard fills up with your pipeline, offers and tasks once the first listings are registered."
+    "panels": {
+      "fyrirvarar": "Open fyrirvarar (conditions)",
+      "fyrirvararEmpty": "No open fyrirvarar.",
+      "expiringOffers": "Offers expiring soon",
+      "expiringOffersEmpty": "No offers expiring soon.",
+      "viewings": "Upcoming viewings and open houses",
+      "viewingsEmpty": "No viewings in the next 14 days.",
+      "tasks": "Open tasks",
+      "tasksEmpty": "No open tasks."
+    },
+    "overdueDays": "{days}d overdue",
+    "daysLeft": "{days}d left",
+    "expired": "Expired",
+    "viewingKind": {
+      "SKODUN": "Skoðun (viewing)",
+      "OPID_HUS": "Opið hús (open house)"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -187,7 +203,14 @@
       "documents": "Documents",
       "parties": "Parties",
       "agents": "Agents",
-      "loans": "Áhvílandi lán (encumbrances)"
+      "loans": "Áhvílandi lán (encumbrances)",
+      "pipeline": "Pipeline",
+      "offers": "Offers",
+      "fyrirvarar": "Fyrirvarar (conditions)",
+      "viewings": "Viewings and open houses",
+      "tasks": "Tasks",
+      "notes": "Notes",
+      "timeline": "Timeline"
     },
     "fields": {
       "gotuheiti": "Street",
@@ -284,6 +307,184 @@
         "invalid": "Check the input — lender and remaining balance are required."
       }
     }
+  },
+  "pipeline": {
+    "moveTo": "Move to {stage}",
+    "moved": "Listing moved to {stage}.",
+    "withdraw": "Fallið frá (withdraw)",
+    "withdrawTitle": "Withdraw from sale?",
+    "withdrawBody": "The listing moves to \"Fallið frá\". Record a reason — it is stored in the timeline.",
+    "withdrawConfirm": "Confirm",
+    "reactivate": "Reactivate",
+    "reason": "Reason",
+    "reasonRequired": "A reason is required.",
+    "conflict": "The listing's stage changed in the meantime — try again.",
+    "overrideTitle": "Fyrirvarar still open",
+    "overrideBody": "As an administrator you can advance the listing anyway. Record a reason — it is written to the audit log.",
+    "overrideConfirm": "Advance anyway",
+    "guards": {
+      "fyrirvararOpen": "Cannot move to Kaupsamningur: fyrirvarar on the accepted offer are still open."
+    }
+  },
+  "offers": {
+    "pageTitle": "Offers",
+    "pageSubtitle": "All offers and counter-offers across listings",
+    "emptyAll": "No offers registered yet.",
+    "columns": {
+      "listing": "Listing",
+      "kind": "Kind",
+      "buyers": "Offeror",
+      "amount": "Amount",
+      "status": "Status",
+      "gildistimi": "Valid until"
+    },
+    "empty": "No offers have been received for this listing.",
+    "new": "Register offer",
+    "kind": {
+      "KAUPTILBOD": "Kauptilboð (offer)",
+      "GAGNTILBOD": "Gagntilboð (counter-offer)"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "ACCEPTED": "Accepted",
+      "REJECTED": "Rejected",
+      "COUNTERED": "Countered",
+      "EXPIRED": "Expired",
+      "WITHDRAWN": "Withdrawn"
+    },
+    "buyersLine": "Offeror: {buyers}",
+    "gildistimi": "Valid until",
+    "afhending": "Handover",
+    "received": "Registered",
+    "paymentSchedule": "Greiðslutilhögun (payment schedule)",
+    "expiringSoon": "Expiring soon",
+    "accept": "Accept",
+    "reject": "Reject",
+    "withdraw": "Withdraw",
+    "counter": "Counter-offer",
+    "errors": {
+      "notPending": "The offer is no longer open."
+    },
+    "form": {
+      "title": "Register kauptilboð",
+      "counterTitle": "Register gagntilboð",
+      "counterBody": "Counter-offer to the offer of {amount}. Buyers carry over; the previous offer is closed.",
+      "amount": "Amount (ISK)",
+      "gildistimi": "Valid until (date and time)",
+      "afhending": "Handover date",
+      "buyers": "Buyers (offerors)",
+      "buyer": "Contact",
+      "sharePct": "Share %",
+      "selectContact": "Select a contact",
+      "addBuyer": "Add buyer",
+      "paymentSchedule": "Greiðslutilhögun (payment schedule)",
+      "itemDescription": "Payment description",
+      "itemPlaceholder": "e.g. Paid at signing of the purchase agreement",
+      "itemAmount": "Amount (ISK)",
+      "itemDueDate": "Due date",
+      "addItem": "Add payment",
+      "sumMatches": "Payments match the amount ✓",
+      "sumDiff": "Off by {diff}",
+      "terms": "Terms / other",
+      "submit": "Register offer",
+      "submitCounter": "Register counter-offer",
+      "errors": {
+        "buyersRequired": "Select at least one buyer.",
+        "paymentEmpty": "Add at least one payment line.",
+        "paymentNonPositive": "Every payment must be above 0 ISK.",
+        "paymentSumMismatch": "The payment schedule does not sum to the offer amount.",
+        "gildistimiPast": "The expiry must be in the future.",
+        "parentClosed": "The previous offer is no longer open."
+      }
+    }
+  },
+  "fyrirvarar": {
+    "empty": "No fyrirvarar registered.",
+    "typeLabel": "Type",
+    "type": {
+      "FJARMOGNUN": "Fjármögnun (financing)",
+      "SALA_EIGIN_EIGNAR": "Sala eigin eignar (sale of own property)",
+      "ASTANDSSKODUN": "Ástandsskoðun (inspection)",
+      "SAMTHYKKI_STJORNAR": "Samþykki stjórnar (board approval)",
+      "ANNAD": "Other"
+    },
+    "description": "Description",
+    "deadline": "Deadline",
+    "responsibleLabel": "Responsible",
+    "responsible": {
+      "BUYER": "Buyer",
+      "SELLER": "Seller"
+    },
+    "status": {
+      "PENDING": "Open",
+      "FULFILLED": "Fulfilled",
+      "WAIVED": "Waived",
+      "FAILED": "Failed"
+    },
+    "daysLeft": "{days} days left",
+    "overdue": "{days}d past deadline",
+    "resolvedLine": "{status} — {by}, {at}",
+    "fulfill": "Fulfilled",
+    "waive": "Waive",
+    "fail": "Failed",
+    "reopen": "Reopen",
+    "add": "Add",
+    "failedPrompt": "A fyrirvari failed. What should happen to the listing?",
+    "backToSale": "Back to Í sölu",
+    "markWithdrawn": "Fallið frá",
+    "failedReason": "A fyrirvari on the accepted offer failed",
+    "errors": {
+      "invalid": "Check the input — description and deadline are required."
+    }
+  },
+  "activity": {
+    "viewings": {
+      "empty": "No viewings registered.",
+      "kindLabel": "Type",
+      "kind": {
+        "SKODUN": "Skoðun (viewing)",
+        "OPID_HUS": "Opið hús (open house)"
+      },
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "attendees": "Attendees",
+      "attendeeLabel": "Attendees (select contacts)",
+      "note": "Note",
+      "add": "Add viewing",
+      "upcoming": "Upcoming",
+      "errors": {
+        "invalid": "Check the input — the start time is required."
+      }
+    },
+    "tasks": {
+      "empty": "No tasks registered.",
+      "title": "Task",
+      "due": "Due",
+      "assignee": "Assignee",
+      "unassigned": "Unassigned",
+      "add": "Add",
+      "errors": {
+        "invalid": "Check the input — a task title is required."
+      }
+    },
+    "notes": {
+      "empty": "No notes.",
+      "newNote": "New note",
+      "add": "Save"
+    }
+  },
+  "timeline": {
+    "empty": "No events yet.",
+    "overridden": "guard overridden",
+    "offerCreated": "{kind} registered — {amount}",
+    "offerDecided": "Offer: {status} — {amount}",
+    "viewing": "{kind}",
+    "viewingKind": {
+      "SKODUN": "Skoðun (viewing)",
+      "OPID_HUS": "Opið hús (open house)"
+    },
+    "noteAdded": "Note added",
+    "taskAdded": "Task created: {title}"
   },
   "admin": {
     "title": "Handsal admin",

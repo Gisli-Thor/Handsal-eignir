@@ -4,6 +4,6 @@ import type { VerticalNavItem } from "@/verticals/types";
 export const eignirNav: VerticalNavItem[] = [
   { labelKey: "listings", href: "/listings", icon: "listings-eignir" },
   { labelKey: "contacts", href: "/contacts", icon: "contacts" },
-  { labelKey: "offers", href: "/offers", icon: "offers", comingSoon: true },
+  { labelKey: "offers", href: "/offers", icon: "offers" },
   { labelKey: "reports", href: "/reports", icon: "reports", comingSoon: true },
 ];

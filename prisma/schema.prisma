@@ -74,6 +74,43 @@ enum MediaCategory {
   DOCUMENT_SCAN
 }
 
+// ── M3: pipeline, offers, fyrirvarar, activity ───────────────────────────────
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COUNTERED
+  EXPIRED
+  WITHDRAWN
+}
+
+enum FyrirvariType {
+  FJARMOGNUN
+  SALA_EIGIN_EIGNAR
+  ASTANDSSKODUN
+  SAMTHYKKI_STJORNAR
+  ANNAD
+}
+
+enum FyrirvariStatus {
+  PENDING
+  FULFILLED
+  WAIVED
+  FAILED
+}
+
+/// Which side of the deal is responsible for resolving a fyrirvari.
+enum PartySide {
+  BUYER
+  SELLER
+}
+
+enum ViewingKind {
+  SKODUN
+  OPID_HUS
+}
+
 enum ListingDocumentType {
   EIGNASKIPTAYFIRLYSING
   SKILALYSING
@@ -120,6 +157,7 @@ model User {
 
   auditLogs          AuditLog[]
   listingAssignments ListingAgent[]
+  taskAssignments    ListingTask[]
 
   // Composite target for tenant-safe FKs (ListingAgent etc.)
   @@unique([tenantId, id])
@@ -176,7 +214,9 @@ model Contact {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  listingLinks ListingContact[]
+  listingLinks       ListingContact[]
+  offerLinks         OfferBuyer[]
+  viewingAttendances ViewingAttendee[]
 
   @@unique([tenantId, kennitala])
   // Composite target for tenant-safe FKs (ListingContact)
@@ -209,6 +249,12 @@ model Listing {
   loans     EncumbranceLoan[]
   media     MediaAsset[]
   documents ListingDocument[]
+
+  stageTransitions StageTransition[]
+  offers           Offer[]
+  viewings         Viewing[]
+  notes            ListingNote[]
+  tasks            ListingTask[]
 
   // Composite target for tenant-safe FKs: child rows reference
   // (tenantId, id) so a row can never point at another tenant's listing,
@@ -367,4 +413,200 @@ model ListingDocument {
   createdAt    DateTime @default(now())
 
   @@index([tenantId, listingId])
+}
+
+// ── M3: pipeline, offers, fyrirvarar, activity ───────────────────────────────
+
+/// Full stage history (SPEC §6): every transition with timestamps and actor.
+/// Append-only — written exclusively by the pipeline engine.
+model StageTransition {
+  id        String  @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+
+  /// null on the initial (creation) entry
+  fromStage String?
+  toStage   String
+  /// null = system transition (offer acceptance side-effect, jobs)
+  actorUserId String?
+  /// Fallið frá reason, or the ADMIN's reason when a guard was overridden
+  reason      String?
+  /// True when an overridable guard was bypassed by an ADMIN (audited)
+  overridden  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, listingId, createdAt])
+}
+
+/// Kauptilboð / gagntilboð (SPEC §7). A counter references its parent —
+/// offers on a listing form chains; parentId null = chain root (kauptilboð).
+model Offer {
+  id        String  @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+
+  parentId String?
+  parent   Offer?  @relation("OfferChain", fields: [tenantId, parentId], references: [tenantId, id])
+  counters Offer[] @relation("OfferChain")
+
+  amountISK BigInt
+  /// Proposed afhending (handover) date
+  afhendingDate DateTime?
+  /// Gildistími — the offer is binding until this timestamp, then expires
+  gildistimi DateTime
+  /// Free-text terms
+  terms      String?
+  status     OfferStatus @default(PENDING)
+
+  /// Agent who registered the offer
+  createdById String?
+  /// Who/when decided (accept/reject/withdraw); expiry leaves these null
+  decidedById String?
+  decidedAt   DateTime?
+  /// Immutable copy of the accepted terms, written at acceptance (SPEC §7)
+  acceptedSnapshot Json?
+
+  buyers       OfferBuyer[]
+  paymentItems OfferPaymentItem[]
+  fyrirvarar   Fyrirvari[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Composite target for tenant-safe child FKs and the self-relation
+  @@unique([tenantId, id])
+  @@index([tenantId, listingId, createdAt])
+  @@index([tenantId, status, gildistimi])
+}
+
+/// Buyer contact(s) on an offer, with optional ownership share (real offers
+/// routinely split ownership, e.g. 54%/46% — see examples/NOTES.md).
+model OfferBuyer {
+  id        String  @id @default(cuid())
+  tenantId  String
+  offerId   String
+  offer     Offer   @relation(fields: [tenantId, offerId], references: [tenantId, id], onDelete: Cascade)
+  contactId String
+  contact   Contact @relation(fields: [tenantId, contactId], references: [tenantId, id])
+  /// Eignarhlutur in percent; null = unspecified/equal
+  sharePct  Decimal? @db.Decimal(5, 2)
+
+  @@unique([offerId, contactId])
+  @@index([tenantId, contactId])
+}
+
+/// Greiðslutilhögun line item (SPEC §7): description, amount, due date.
+/// The items of an offer must sum to the offer amount (validated in core).
+model OfferPaymentItem {
+  id       String @id @default(cuid())
+  tenantId String
+  offerId  String
+  offer    Offer  @relation(fields: [tenantId, offerId], references: [tenantId, id], onDelete: Cascade)
+
+  description String
+  amountISK   BigInt
+  dueDate     DateTime?
+  sortOrder   Int
+
+  @@index([tenantId, offerId, sortOrder])
+}
+
+/// Fyrirvari — typed condition on an (accepted) offer (SPEC §7).
+model Fyrirvari {
+  id       String @id @default(cuid())
+  tenantId String
+  offerId  String
+  offer    Offer  @relation(fields: [tenantId, offerId], references: [tenantId, id], onDelete: Cascade)
+
+  type        FyrirvariType
+  description String
+  deadline    DateTime
+  /// Which side must resolve it
+  responsible PartySide
+  status      FyrirvariStatus @default(PENDING)
+
+  resolvedById String?
+  resolvedAt   DateTime?
+
+  /// Reminder-email stamps (7 days / 2 days / on the deadline) so the
+  /// in-process job never sends a reminder twice.
+  reminder7SentAt   DateTime?
+  reminder2SentAt   DateTime?
+  reminderDueSentAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, status, deadline])
+}
+
+/// Skoðun / opið hús with attendees (SPEC §5 activity).
+model Viewing {
+  id        String      @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing     @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+  kind      ViewingKind
+  startsAt  DateTime
+  endsAt    DateTime?
+  note      String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  attendees ViewingAttendee[]
+
+  // Composite target for the attendee FK
+  @@unique([tenantId, id])
+  @@index([tenantId, startsAt])
+  @@index([tenantId, listingId])
+}
+
+model ViewingAttendee {
+  id        String  @id @default(cuid())
+  tenantId  String
+  viewingId String
+  viewing   Viewing @relation(fields: [tenantId, viewingId], references: [tenantId, id], onDelete: Cascade)
+  contactId String
+  contact   Contact @relation(fields: [tenantId, contactId], references: [tenantId, id])
+
+  @@unique([viewingId, contactId])
+  @@index([tenantId, contactId])
+}
+
+/// Free-form note on a listing (SPEC §5 activity).
+model ListingNote {
+  id        String  @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+
+  body        String
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, listingId, createdAt])
+}
+
+/// Task with due date and assignee (SPEC §5 activity).
+model ListingTask {
+  id        String  @id @default(cuid())
+  tenantId  String
+  listingId String
+  listing   Listing @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+
+  title          String
+  dueDate        DateTime?
+  assigneeUserId String?
+  assignee       User?     @relation(fields: [tenantId, assigneeUserId], references: [tenantId, id])
+  completedAt    DateTime?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, listingId])
+  @@index([tenantId, assigneeUserId, completedAt])
+  @@index([tenantId, completedAt, dueDate])
 }
