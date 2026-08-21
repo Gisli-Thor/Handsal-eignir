@@ -212,7 +212,9 @@ describe("tenant-scoped writes", () => {
 
   it("upsert cannot update a foreign row (creates within scope instead of touching it)", async () => {
     // userB's email exists globally, but within tenant A's scope it does not.
-    // A unique-email conflict is the correct outcome — never an update of B's row.
+    // Prisma's native upsert (INSERT ... ON CONFLICT DO UPDATE WHERE tenantId)
+    // then affects zero rows; the isolation layer surfaces that as an error —
+    // never an update of B's row, never a silent null.
     await expect(
       dbA.user.upsert({
         where: { email: "b@b.test" },
@@ -224,9 +226,11 @@ describe("tenant-scoped writes", () => {
         },
         update: { name: "Hacked" },
       }),
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(TenantIsolationError);
     const b = await db.user.findUnique({ where: { id: fixture.userB.id } });
     expect(b!.name).toBe("User B");
+    const rows = await db.user.findMany({ where: { email: "b@b.test" } });
+    expect(rows).toHaveLength(1);
   });
 });
 

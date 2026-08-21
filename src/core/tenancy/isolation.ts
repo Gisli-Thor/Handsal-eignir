@@ -152,7 +152,18 @@ export function createTenantDb(base: PrismaClient, tenantId: string) {
             );
           }
 
-          return query(a);
+          const result = await query(a);
+          // Prisma compiles upsert to a native `INSERT ... ON CONFLICT DO
+          // UPDATE ... WHERE <merged unique where>`. When the conflicting row
+          // belongs to another tenant, the WHERE guard excludes it and the
+          // statement affects zero rows — Prisma then resolves `null`, which
+          // only occurs in that cross-tenant-collision case. Surface it.
+          if (operation === "upsert" && result === null) {
+            throw new TenantIsolationError(
+              `${model}.upsert conflicted with a unique value held outside tenant "${tenantId}"; no row was written.`,
+            );
+          }
+          return result;
         },
       },
     },

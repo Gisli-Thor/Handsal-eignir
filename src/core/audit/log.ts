@@ -28,7 +28,10 @@ export interface AuditWriter {
 export async function logAudit(db: AuditWriter, entry: AuditEntry): Promise<void> {
   await db.auditLog.create({
     data: {
-      tenantId: entry.tenantId ?? null,
+      // Omit tenantId entirely when the caller didn't set one: the
+      // tenant-scoped client stamps it and rejects an explicit null, while
+      // the unscoped client leaves the column NULL (platform-level event).
+      ...(entry.tenantId !== undefined ? { tenantId: entry.tenantId } : {}),
       actorUserId: entry.actorUserId ?? null,
       action: entry.action,
       targetType: entry.targetType ?? null,

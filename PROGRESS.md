@@ -36,27 +36,11 @@ Open questions / follow-ups:
 - Warning email at 90% plan usage (SPEC §12) needs the EmailAdapter — lands with M4/M5.
 - Tenant-scoped audit view for tenant ADMINs (SPEC §13) — planned with M2+ when tenants have business events worth showing.
 
-### ⏸ Session stop point (2026-08-20)
+### ✅ DB verification (resolved 2026-08-21)
 
-**All M1 code is written and committed** (5 commits, latest `9abe133`). Typecheck, lint, 13 unit tests, `next build`, and a live smoke test of the dev server (login page renders in `is`/`en`, middleware redirects work) are all verified green.
+Docker chain resolved (BIOS SVM → WSL component → reboot; Docker Desktop engine 29.7.2 running). `db:up`, `db:migrate` (both offline-generated migrations applied cleanly first try), `seed`, and both integration suites verified — see the M2 verification note below for the two runtime bugs the first live run surfaced and their fixes.
 
-**Blocked on Docker**: Docker Desktop was installed but failed to start — virtualization (AMD SVM) is disabled in the BIOS of this machine (ASUS ROG STRIX B550-F Gaming). The user is restarting to enable it: **BIOS (Del) → F7 Advanced Mode → Advanced → CPU Configuration → SVM Mode → Enabled → F10**. If Docker then complains about WSL, run `wsl --install --no-distribution` in an admin PowerShell and reboot once more.
-
-**Exact next steps when the session resumes** (nothing else is pending for M1):
-
-1. `npm run db:up` — start postgres/minio/mailpit
-2. `npm run db:migrate` — apply the initial migration (already generated in `prisma/migrations/20260820000000_init`)
-3. `npm run seed` — seed plans, superadmin, demo tenants (logins in README, password `handsal-demo1`)
-4. `npm run test:integration` — run the 22-test tenant isolation suite
-5. Optionally verify login flows manually at http://localhost:3000
-6. Mark this stop point resolved here, then **begin M2 — Contacts & properties**
-
-## M2 — Contacts & properties ⏳ (in progress, 2026-08-20)
-
-Note: M1's DB verification (migrate/seed/integration tests) is still pending —
-Docker needs the WSL optional component (`wsl --install --no-distribution` in
-an **admin** PowerShell + reboot; SVM is now enabled in BIOS). M2 code work
-continues meanwhile; everything below is verified by typecheck/lint/unit tests.
+## M2 — Contacts & properties ✅ (2026-08-21)
 
 Completed:
 
@@ -77,7 +61,31 @@ Completed:
 - [x] README demo flows (M2), ARCHITECTURE.md (domain model, storage/media, composite FKs)
 - [x] Verified: typecheck, lint, 35 unit tests, production `next build` all green
 
-**M2 code complete — DB verification pending Docker** (same gate as M1): `npm run db:up && npm run db:migrate && npm run seed && npm run test:integration`.
+### DB + live verification (2026-08-21)
+
+First run against real Postgres/MinIO: migrations applied cleanly, seed created
+104 postal codes / 8 contacts / 12 listings with photos through the real sharp +
+MinIO pipeline. Browser smoke test (login as anna@demo.is, listings grid with
+MinIO-signed cover thumbs, listing detail with gallery/cover/categories/docs
+panels, contact create/delete, Þjóðskrá lookup autofill + toast) all pass.
+Final state: typecheck, lint, **37 unit + 30 integration tests** green.
+
+Two runtime bugs surfaced by the first live run, both fixed:
+
+1. **Upsert vs. native `ON CONFLICT`** (`src/core/tenancy/isolation.ts`): Prisma
+   compiles scoped upsert to `INSERT … ON CONFLICT DO UPDATE … WHERE tenantId`;
+   on a cross-tenant unique collision the WHERE excludes the foreign row, zero
+   rows are written and Prisma resolves `null` instead of throwing P2002.
+   Isolation held (foreign row untouched, no clone), but the silent `null`
+   violated upsert's contract — the scoped client now converts it to
+   `TenantIsolationError`. Integration test tightened accordingly.
+2. **`logAudit` explicit `tenantId: null`** (`src/core/audit/log.ts`): the
+   `entry.tenantId ?? null` coercion sent an explicit null through the scoped
+   client, which rejects it (only the *absence* of the key lets the client
+   stamp it). Every scoped audit call site (contacts, listings, media,
+   documents — 11 sites) crashed at runtime; unit/build checks missed it since
+   M1's audit events all used `unscopedDb`. Fixed to omit the key unless
+   explicitly provided + unit regression test (`src/core/audit/log.test.ts`).
 
 Decisions (M2 so far):
 
@@ -89,28 +97,7 @@ Decisions (M2 so far):
 6. **Áhvílandi lán on Listing** (not Property) so the Bílar vertical reuses the same structure (SPEC §5 "same structure").
 7. **Storage keys embed tenant**: `tenants/{tenantId}/listings/{listingId}/…`, always derived server-side; browser never controls keys. Signed GET URLs generated per render, plain `<img>` (next/image would cache expired signed URLs).
 
-### ⏸ Session stop point (2026-08-20, end of day)
-
-**M1 + M2 code complete and committed** (latest `33bb330`); typecheck, lint,
-35 unit tests and production `next build` all green. DB verification for both
-milestones is the only outstanding item.
-
-**Docker status**: SVM enabled in BIOS ✓ → `wsl --install --no-distribution`
-run in admin PowerShell ✓ → **machine rebooting now** (this was the last
-blocker; Docker Desktop should start after the reboot).
-
-**Exact next steps after reboot** (nothing else pending for M1/M2):
-
-1. Start Docker Desktop (wait until the engine is running; if it complains,
-   check `wsl --status` — the WSL component should now be present)
-2. `npm run db:up` — postgres :5432, MinIO :9000/:9001, Mailpit :1025/:8025
-3. `npm run db:migrate` — applies both migrations (`…_init`, `…_m2_contacts_properties_media`)
-4. `npm run seed` — plans, users, postal codes, contacts, 12 properties with photos (logins in README, password `handsal-demo1`)
-5. `npm run test:integration` — both isolation suites (M1 generic + M2 composite-FK)
-6. Smoke-test M2 flows per README "Demo flows" (Þjóðskrá lookup, media upload/reorder/cover, documents)
-7. Mark this stop point resolved here, mark M2 ✅, then begin **M3 — Pipeline, offers, fyrirvarar**
-
-## M3 — Pipeline, offers, fyrirvarar ☐
+## M3 — Pipeline, offers, fyrirvarar ☐ (next)
 
 ## M4 — Portals, söluyfirlit, e-signing ☐
 
