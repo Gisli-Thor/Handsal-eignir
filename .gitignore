@@ -47,3 +47,6 @@ next-env.d.ts
 # legacy-system example PDFs — local reference only, contain real personal
 # data (kennitölur, names, phones); structure is distilled in examples/NOTES.md
 /examples/*.pdf
+
+# local detached dev-server log
+dev-server.log
