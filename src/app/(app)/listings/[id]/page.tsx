@@ -20,6 +20,11 @@ import { AgentsPanel } from "./agents-panel";
 import { LoansPanel } from "./loans-panel";
 import { DeleteListingButton } from "./delete-listing-button";
 import { getPortalAdapters } from "@/lib/services";
+import {
+  CommissionSchemeForm,
+  type SchemeJson,
+} from "@/components/commission-scheme-form";
+import { updateListingCommissionSchemeAction } from "../commission-actions";
 import { StageTimeline } from "./stage-timeline";
 import { OffersPanel, type OfferView } from "./offers-panel";
 import { FyrirvararPanel, type FyrirvariView } from "./fyrirvarar-panel";
@@ -73,6 +78,7 @@ export default async function ListingDetailPage({
       },
       agents: { include: { user: { select: { id: true, name: true } } } },
       loans: { orderBy: { createdAt: "asc" } },
+      commissionRecord: true,
       portalPublications: {
         include: { syncEvents: { orderBy: { createdAt: "desc" }, take: 5 } },
       },
@@ -167,6 +173,7 @@ export default async function ListingDetailPage({
 
   const tOffers = await getTranslations("offers");
   const tTimeline = await getTranslations("timeline");
+  const tCommission = await getTranslations("commission");
   const now = Date.now();
   const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -769,9 +776,11 @@ export default async function ListingDetailPage({
                 userId: link.userId,
                 name: link.user.name,
                 isPrimary: link.isPrimary,
+                splitPct: link.splitPct === null ? null : Number(link.splitPct),
               }))}
               availableUsers={availableUsers}
               canManage={canManage}
+              isAdmin={session.user.role === "ADMIN"}
             />
           </CardContent>
         </Card>
@@ -797,6 +806,93 @@ export default async function ListingDetailPage({
           />
         </CardContent>
       </Card>
+
+      {listing.commissionRecord || session.user.role === "ADMIN" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("sections.commission")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {listing.commissionRecord ? (
+              <div className="grid gap-3">
+                <Badge variant="secondary" className="w-fit">
+                  {tCommission("frozen", {
+                    date: formatDate(listing.commissionRecord.createdAt),
+                  })}
+                </Badge>
+                <dl className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-muted-foreground">{tCommission("salePrice")}</dt>
+                    <dd className="mt-0.5 font-medium tabular-nums">
+                      {formatISK(Number(listing.commissionRecord.salePriceISK))}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">{tCommission("gross")}</dt>
+                    <dd className="mt-0.5 font-medium tabular-nums">
+                      {formatISK(Number(listing.commissionRecord.grossISK))}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">{tCommission("vsk")}</dt>
+                    <dd className="mt-0.5 font-medium tabular-nums">
+                      {formatISK(Number(listing.commissionRecord.vskISK))}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">{tCommission("total")}</dt>
+                    <dd className="mt-0.5 font-semibold tabular-nums">
+                      {formatISK(Number(listing.commissionRecord.totalISK))}
+                    </dd>
+                  </div>
+                </dl>
+                {Array.isArray(listing.commissionRecord.agentSplits) &&
+                (listing.commissionRecord.agentSplits as unknown[]).length > 0 ? (
+                  <div>
+                    <p className="text-muted-foreground mb-1 text-xs font-medium">
+                      {tCommission("splits")}
+                    </p>
+                    <ul className="grid gap-0.5 text-sm">
+                      {(
+                        listing.commissionRecord.agentSplits as Array<{
+                          name: string;
+                          percent: number;
+                          amountISK: string;
+                        }>
+                      ).map((split, index) => (
+                        <li key={index} className="flex justify-between gap-4">
+                          <span>
+                            {split.name}{" "}
+                            <span className="text-muted-foreground">
+                              ({String(split.percent).replace(".", ",")}%)
+                            </span>
+                          </span>
+                          <span className="tabular-nums">
+                            {formatISK(Number(split.amountISK))}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <>
+                <p className="text-muted-foreground mb-4 text-sm">
+                  {tCommission("overrideHint")}
+                </p>
+                <CommissionSchemeForm
+                  initialScheme={
+                    (listing.commissionSchemeOverride as SchemeJson | null) ?? null
+                  }
+                  allowUseDefault
+                  onSave={updateListingCommissionSchemeAction.bind(null, listing.id)}
+                />
+              </>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6">
         <Card>

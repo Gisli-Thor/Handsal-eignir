@@ -20,6 +20,8 @@ import type {
   PropertyType,
 } from "../src/generated/prisma/enums";
 import { kennitalaCheckDigit } from "../src/core/contacts/kennitala";
+import { calculateCommission } from "../src/core/commission/calculate";
+import { commissionSchemeSchema } from "../src/core/commission/scheme";
 import { buildAcceptedSnapshot } from "../src/core/offers/state";
 import type { TenantDb } from "../src/core/tenancy/isolation";
 import { EIGNIR_STAGES, WITHDRAWN_STAGE } from "../src/verticals/eignir/pipeline";
@@ -161,8 +163,8 @@ async function main() {
   // signing requests, inbound leads
   await seedM4Data(demoEignir.id, anna.id, jon.id);
 
-  // ── M5: completed sale with commission record ─────────────────────────────
-  // (extended in milestone M5)
+  // ── M5: commission schemes, agent splits, frozen commission record ────────
+  await seedM5Data(demoEignir.id, demoBilar.id, anna.id, jon.id);
 
   // ── M6: 2 scaffolded vehicles for the Bílar tenant ────────────────────────
   // (extended in milestone M6)
@@ -1339,6 +1341,138 @@ async function seedM4Data(
   } catch (error) {
     console.warn("M4: storage unreachable — skipping signing seed:", error);
   }
+}
+
+// ═══ M5 demo data ═════════════════════════════════════════════════════════
+
+async function seedM5Data(
+  eignirTenantId: string,
+  bilarTenantId: string,
+  annaId: string,
+  jonId: string,
+): Promise<void> {
+  const existing = await db.commissionRecord.count({
+    where: { tenantId: eignirTenantId },
+  });
+  if (existing > 0) {
+    console.log("M5 data already present (%d records) — skipping M5 seed", existing);
+    return;
+  }
+  const now = Date.now();
+
+  // ── Tenant-default schemes (percent + fees per examples/NOTES.md) ─────────
+  const eignirScheme = commissionSchemeSchema.parse({
+    version: 1,
+    type: "FIXED_PERCENT",
+    percent: 2.2,
+    lineItems: [
+      { label: "Gagnaöflun", amountISK: "39900" },
+      { label: "Umsýslugjald", amountISK: "74900" },
+    ],
+  });
+  await db.tenant.update({
+    where: { id: eignirTenantId },
+    data: { commissionScheme: eignirScheme },
+  });
+  await db.tenant.update({
+    where: { id: bilarTenantId },
+    data: {
+      commissionScheme: commissionSchemeSchema.parse({
+        version: 1,
+        type: "FLAT_PLUS_PERCENT",
+        flatISK: "90000",
+        percent: 1.0,
+        lineItems: [],
+      }),
+    },
+  });
+
+  const properties = await db.property.findMany({
+    where: { tenantId: eignirTenantId },
+    select: { fastanumer: true, listingId: true },
+  });
+  const listingByFnr = new Map(properties.map((p) => [p.fastanumer, p.listingId]));
+
+  // ── TIERED override on the Kaupsamningur-stage listing (forecast demo) ───
+  const hafnargata = listingByFnr.get("F2063490");
+  if (hafnargata) {
+    await db.listing.update({
+      where: { id: hafnargata },
+      data: {
+        commissionSchemeOverride: commissionSchemeSchema.parse({
+          version: 1,
+          type: "TIERED",
+          tiers: [
+            { uptoISK: "50000000", percent: 2.5 },
+            { uptoISK: null, percent: 1.8 },
+          ],
+          lineItems: [{ label: "Gagnaöflun", amountISK: "39900" }],
+        }),
+      },
+    });
+  }
+
+  // ── Heiðarvegur 5 (Afsal/Lokið): 60/40 split + frozen record ──────────────
+  const heidarvegur = listingByFnr.get("F2012348");
+  if (heidarvegur) {
+    const agents = await db.listingAgent.findMany({
+      where: { listingId: heidarvegur },
+      include: { user: { select: { id: true, name: true } } },
+    });
+    for (const link of agents) {
+      await db.listingAgent.update({
+        where: { id: link.id },
+        data: { splitPct: link.isPrimary ? 60 : 40 },
+      });
+    }
+    const acceptedOffer = await db.offer.findFirst({
+      where: { listingId: heidarvegur, status: "ACCEPTED" },
+      select: { amountISK: true },
+    });
+    const salePriceISK = acceptedOffer?.amountISK ?? 57_500_000n;
+    // Always the real calculator — never hand-written frozen numbers.
+    const result = calculateCommission(
+      eignirScheme,
+      salePriceISK,
+      agents.map((link) => ({
+        userId: link.userId,
+        name: link.user.name,
+        isPrimary: link.isPrimary,
+        splitPct: link.isPrimary ? 60 : 40,
+      })),
+    );
+    await db.commissionRecord.create({
+      data: {
+        tenantId: eignirTenantId,
+        listingId: heidarvegur,
+        salePriceISK,
+        scheme: { schemeSource: "TENANT", scheme: eignirScheme },
+        grossISK: result.grossISK,
+        vskISK: result.vskISK,
+        totalISK: result.totalISK,
+        lineItems: result.lineItems.map((item) => ({
+          label: item.label,
+          amountISK: item.amountISK.toString(),
+        })),
+        agentSplits: result.splits.map((split) => ({
+          userId: split.userId,
+          name: split.name,
+          percent: split.percent,
+          amountISK: split.amountISK.toString(),
+        })),
+        // Backdated near soldAt so the monthly report isn't a single spike.
+        createdAt: new Date(now - 5 * DAY),
+      },
+    });
+  }
+
+  // Suppress unused warnings for ids kept for parity with other seed fns.
+  void annaId;
+  void jonId;
+
+  console.log(
+    "M5: tenant schemes set, TIERED override (Hafnargata 28), 60/40 split + frozen commission record (Heiðarvegur 5)",
+  );
 }
 
 main()

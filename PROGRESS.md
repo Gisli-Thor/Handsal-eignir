@@ -256,6 +256,85 @@ Decisions (M4):
 Typecheck, lint, 80 unit + 51 integration tests, production build (dev server
 stopped first) all green. Browser smoke passed end-to-end at 1920px width.
 
-## M5 — Commission, plans, dashboard ☐
+## M5 — Commission, plans, dashboard ✅ (2026-08-22)
+
+Completed:
+
+- [x] Schema (migration `20260822184301_m5_commission_plans`):
+  `Tenant.commissionScheme Json?` + `usageWarnedAt`,
+  `Listing.commissionSchemeOverride Json?`, `ListingAgent.splitPct`,
+  `CommissionRecord` (frozen, composite tenant-safe FK, unique per listing,
+  append-only in the scoped registry); audit actions
+  COMMISSION_RECORD_CREATED / COMMISSION_SCHEME_UPDATED / AGENT_SPLIT_UPDATED
+- [x] Commission core (`src/core/commission/`): zod scheme (JSON columns,
+  BigInt as digit strings, `version: 1`), pure BigInt calculator (basis
+  points, floor division, VSK 24% on commission + fixed fees), Icelandic
+  disclosure generator, finalize hook (accepted offer amount ?? ásett verð,
+  freeze-once), report aggregations + CSV builder (UTF-8 BOM, semicolons)
+- [x] Plan limits (`src/core/plans/`): non-overridable guard registered on
+  ALL five active-band stages with a free within-band short-circuit;
+  upgrade-prompt dialog in the stage timeline (ADMIN gets a /settings link);
+  usage meter on /settings; 90% warning email job (stamp-before-send,
+  rollback on failure, cleared under 90%) as the third scheduler job
+- [x] Settings: usage meter + tenant scheme editor (shared
+  `commission-scheme-form.tsx`); per-listing override card on listing detail
+  (ADMIN, "use tenant default" option); agent split editor in the agents
+  panel (per-agent %, sum-to-100 validation); frozen record card with splits
+- [x] Söluyfirlit: söluþóknun disclosure now scheme-derived
+  (`describeSchemeIs`) when `soluthoknunText` is unset (text = explicit
+  override, superseding the M4 stopgap)
+- [x] Reports `/reports` (ADMIN, nav `adminOnly` flag): monthly earned
+  (hand-rolled bar chart on `--chart-1`, last 12 months), per-agent,
+  pipeline forecast (stages 3–6, real calculator, effective scheme); CSV
+  route `?report=monthly|agents|forecast`
+- [x] Dashboard (full per SPEC §13): pipeline overview (counts + ásett-verð
+  value per stage, mini bars) + recent portal sync errors panels added to
+  the M3 four
+- [x] Polish pass: `(app)`/admin `loading.tsx`, global `error.tsx` +
+  `not-found.tsx` (translated), sheet/dialog sr-only Close via
+  `common.close`, settings users-table empty branch
+- [x] Seed: tenant schemes (Eignir 2,2% + NOTES.md fees; Bílar
+  FLAT_PLUS_PERCENT), TIERED override on Hafnargata 28, 60/40 split +
+  real-calculator CommissionRecord on Heiðarvegur 5 (backdated near soldAt)
+- [x] Tests: +22 unit (calculator incl. tier boundaries/basis-point
+  float/split remainders, scheme zod, describeSchemeIs, plan guard incl.
+  band short-circuit, CSV builder) and +10 integration (freeze-once hook,
+  guard at limit on real DB, record isolation + append-only, usage-warning
+  job stamp set/clear/rollback). Totals: **102 unit + 61 integration green**
+- [x] Verified live in browser: dashboard panels, reports + CSV (BOM
+  checked), settings meter + prefilled scheme editor, plan-limit upgrade
+  dialog (limit temporarily lowered to current usage), 60/40 split editor +
+  frozen record card, scheme-derived disclosure extracted from a freshly
+  generated söluyfirlit PDF
+
+Decisions (M5):
+
+1. **Schemes as zod-validated JSON columns** (not a model): polymorphic blob
+   nothing queries relationally; reports read the frozen record; corrupt
+   blobs degrade to "no scheme".
+2. **TIERED = marginal brackets** (tax-band style; single-bracket-by-total
+   would let a tiny price increase reduce the commission). `uptoISK`
+   inclusive; last tier open-ended.
+3. **Splits (user decision)**: primary agent gets 100% by default;
+   per-listing percentages (ListingAgent.splitPct) editable by ADMIN, must
+   sum to 100; rounding remainder to the primary. Line items are agency
+   fees — excluded from splits.
+4. **BigInt floor arithmetic + basis points** (Math.round(percent×100)) —
+   deterministic whole-ISK, immune to float drift (2.2×100 ≠ 220 in floats).
+5. **Plan guard on the whole active band, not just Í sölu** — the engine
+   allows any→any jumps; within-band moves short-circuit without a DB hit.
+   Non-overridable per SPEC §12.
+6. **Usage warning is a job, not a hook** — a hook misses the
+   superadmin-lowers-plan case; dedup via `usageWarnedAt` stamped before
+   send, rolled back on failure, cleared under 90%.
+7. **Dashboard stage values = sum of ásett verð** (accepted-offer amounts
+   per stage deliberately not folded in — the forecast on /reports does
+   that properly).
+8. **CSV**: UTF-8 BOM + semicolon delimiter (Icelandic Excel), CRLF.
+
+### M5 verification (2026-08-22)
+
+Typecheck, lint, 102 unit + 61 integration tests, production build (dev
+server stopped first) all green. Browser smoke passed end-to-end.
 
 ## M6 — Handsal Bílar scaffold ☐

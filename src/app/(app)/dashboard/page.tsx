@@ -2,7 +2,9 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import {
   CalendarClock,
+  CloudAlert,
   HandCoins,
+  Layers,
   ListChecks,
   ShieldAlert,
 } from "lucide-react";
@@ -12,6 +14,7 @@ import { requireTenantUser } from "@/lib/auth-guards";
 import { getTenantDb } from "@/lib/db";
 import { formatDate, formatDateTime, formatISK } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { EIGNIR_STAGES } from "@/verticals/eignir/pipeline";
 
 export async function generateMetadata() {
   const t = await getTranslations("dashboard");
@@ -36,8 +39,15 @@ export default async function DashboardPage() {
   const db = getTenantDb(session.user.tenantId);
   const now = Date.now();
 
-  const [pendingFyrirvarar, expiringOffers, upcomingViewings, openTasks] =
-    await Promise.all([
+  const tStages = await getTranslations("listings.stage");
+  const [
+    pendingFyrirvarar,
+    expiringOffers,
+    upcomingViewings,
+    openTasks,
+    stageGroups,
+    portalErrors,
+  ] = await Promise.all([
       // SPEC §7: all pending fyrirvarar across listings, sorted by deadline.
       db.fyrirvari.findMany({
         where: { status: "PENDING", offer: { status: "ACCEPTED" } },
@@ -76,12 +86,55 @@ export default async function DashboardPage() {
           assignee: { select: { name: true } },
         },
       }),
+      // SPEC §13: pipeline overview — counts + value per stage (value = sum
+      // of ásett verð; accepted-offer amounts deliberately not folded in,
+      // see PROGRESS.md M5).
+      db.listing.groupBy({
+        by: ["stage"],
+        _count: { _all: true },
+        _sum: { askingPriceISK: true },
+      }),
+      // SPEC §13: recent portal sync errors (index [tenantId, status]).
+      db.portalPublication.findMany({
+        where: { status: "ERROR" },
+        orderBy: { updatedAt: "desc" },
+        take: 12,
+        include: { listing: { select: { property: true } } },
+      }),
     ]);
 
   const endOfDay = (date: Date) => {
     const end = new Date(date);
     end.setHours(23, 59, 59, 999);
     return end.getTime();
+  };
+
+  // Pipeline overview rows in stage order, withdrawn last.
+  const stageOrder = [...EIGNIR_STAGES, "FALLID_FRA"];
+  const pipelineRows = stageOrder
+    .map((stage) => {
+      const group = stageGroups.find((row) => row.stage === stage);
+      return {
+        stage,
+        count: group?._count._all ?? 0,
+        valueISK: group?._sum.askingPriceISK ?? 0n,
+      };
+    })
+    .filter((row) => row.count > 0 || row.stage !== "FALLID_FRA");
+  const maxStageCount = pipelineRows.reduce((max, row) => Math.max(max, row.count), 0);
+
+  const portalErrorsSection = {
+    key: "portalErrors",
+    icon: CloudAlert,
+    title: t("panels.portalErrors"),
+    empty: t("panels.portalErrorsEmpty"),
+    rows: portalErrors.map((publication) => ({
+      id: publication.id,
+      href: `/listings/${publication.listingId}`,
+      primary: addressOf(publication.listing),
+      secondary: publication.lastError,
+      badge: { text: publication.portalKey, tone: "red" as const },
+    })),
   };
 
   const sections = [
@@ -161,6 +214,7 @@ export default async function DashboardPage() {
           : null,
       })),
     },
+    portalErrorsSection,
   ];
 
   return (
@@ -169,6 +223,46 @@ export default async function DashboardPage() {
       <p className="text-muted-foreground mt-1 text-sm">
         {t("welcome", { vertical: verticalName })}
       </p>
+
+      {/* Pipeline overview (SPEC §13): counts + value per stage */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Layers aria-hidden className="text-vertical size-4" />
+            {t("panels.pipeline")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
+            {pipelineRows.map((row) => (
+              <Link
+                key={row.stage}
+                href="/listings"
+                className="hover:bg-muted/60 grid gap-1 rounded-md border px-3 py-2.5 transition-colors"
+              >
+                <span className="text-muted-foreground truncate text-xs">
+                  {tStages(row.stage)}
+                </span>
+                <span className="text-xl font-semibold tabular-nums">{row.count}</span>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {row.valueISK > 0n ? formatISK(Number(row.valueISK)) : "–"}
+                </span>
+                <div className="bg-muted mt-1 h-1 overflow-hidden rounded-full">
+                  <div
+                    className="bg-vertical h-full rounded-full"
+                    style={{
+                      width:
+                        maxStageCount > 0
+                          ? `${Math.round((row.count / maxStageCount) * 100)}%`
+                          : "0%",
+                    }}
+                  />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {sections.map((section) => (

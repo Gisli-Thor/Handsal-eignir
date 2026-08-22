@@ -174,6 +174,12 @@ model Tenant {
   status     TenantStatus @default(ACTIVE)
   planId     String
   plan       Plan         @relation(fields: [planId], references: [id])
+  /// Tenant-default söluþóknun scheme (SPEC §10) — zod-validated JSON, see
+  /// src/core/commission/scheme.ts. Per-listing override on Listing.
+  commissionScheme Json?
+  /// Dedup stamp for the 90% plan-usage warning email (SPEC §12); cleared
+  /// when usage drops below 90% so the next crossing re-warns.
+  usageWarnedAt DateTime?
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
@@ -286,9 +292,12 @@ model Listing {
   askingPriceISK BigInt?
   descriptionIs  String?
   descriptionEn  String?
-  /// Söluþóknun disclosure line on the söluyfirlit (SPEC §9). Free text until
-  /// M5 commission schemes supersede it (decision in PROGRESS.md).
+  /// Explicit söluþóknun disclosure text for the söluyfirlit (SPEC §9).
+  /// Overrides the scheme-derived line when set (M5).
   soluthoknunText String?
+  /// Per-listing söluþóknun scheme override (SPEC §5, §10) — same JSON shape
+  /// as Tenant.commissionScheme; null = tenant default applies.
+  commissionSchemeOverride Json?
   publishedAt    DateTime?
   soldAt         DateTime?
   createdAt      DateTime  @default(now())
@@ -310,6 +319,7 @@ model Listing {
   portalPublications PortalPublication[]
   soluyfirlitVersions SoluyfirlitVersion[]
   signingRequests    SigningRequest[]
+  commissionRecord   CommissionRecord?
 
   // Composite target for tenant-safe FKs: child rows reference
   // (tenantId, id) so a row can never point at another tenant's listing,
@@ -329,6 +339,10 @@ model ListingAgent {
   userId    String
   user      User    @relation(fields: [tenantId, userId], references: [tenantId, id])
   isPrimary Boolean @default(false)
+  /// Commission split percentage (SPEC §10). Null on all of a listing's
+  /// agents = default: the primary agent receives 100%. When set, the
+  /// listing's set percentages must sum to 100 (validated in the action).
+  splitPct Decimal? @db.Decimal(5, 2)
 
   @@unique([listingId, userId])
   @@index([tenantId, userId])
@@ -802,6 +816,37 @@ model SigningEvent {
   createdAt DateTime @default(now())
 
   @@index([tenantId, requestId, createdAt])
+}
+
+// ── M5: commission ───────────────────────────────────────────────────────────
+
+/// Frozen söluþóknun record (SPEC §10), computed once on entering
+/// Afsal/Lokið by the pipeline hook. Append-only at the client layer;
+/// amounts ex-VSK except totalISK. JSON blobs store BigInt as digit strings.
+model CommissionRecord {
+  id        String  @id @default(cuid())
+  tenantId  String
+  listingId String  @unique
+  listing   Listing @relation(fields: [tenantId, listingId], references: [tenantId, id], onDelete: Cascade)
+
+  salePriceISK BigInt
+  /// Frozen scheme snapshot incl. schemeSource (LISTING/TENANT/NONE)
+  scheme    Json
+  /// Commission ex-VSK
+  grossISK  BigInt
+  vskISK    BigInt
+  /// gross + line items + VSK
+  totalISK  BigInt
+  lineItems Json
+  /// [{ userId, name, percent, amountISK }]
+  agentSplits Json
+
+  createdAt DateTime @default(now())
+
+  // One record per listing; the composite pair also satisfies the 1:1
+  // relation's unique requirement on the defining side.
+  @@unique([tenantId, listingId])
+  @@index([tenantId, createdAt])
 }
 
 /// Task with due date and assignee (SPEC §5 activity).

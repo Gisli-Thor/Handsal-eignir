@@ -8,6 +8,14 @@ import { unscopedDb } from "@/lib/db";
 import { getEmail } from "@/lib/services";
 import { expireOverdueOffers } from "@/core/offers/expiry";
 import { sendFyrirvariReminders } from "@/core/fyrirvarar/reminders";
+import { sendUsageWarnings } from "@/core/plans/usage-warning";
+import { ACTIVE_STAGES } from "@/verticals/eignir/pipeline";
+
+/** Active-band stages per vertical for plan-usage checks (SPEC §12).
+ * Bílar joins in M6 with its own config. */
+const ACTIVE_STAGES_BY_VERTICAL: Record<string, readonly string[]> = {
+  EIGNIR: ACTIVE_STAGES,
+};
 
 const INTERVAL_MS = 60_000;
 
@@ -28,6 +36,12 @@ export async function runJobsOnce(): Promise<void> {
         `[jobs] fyrirvari reminders sent: ${reminders.sent}, errors: ${reminders.errors}`,
       );
     }
+    const usage = await sendUsageWarnings(unscopedDb, getEmail(), ACTIVE_STAGES_BY_VERTICAL);
+    if (usage.sent > 0 || usage.errors > 0) {
+      console.log(
+        `[jobs] plan-usage warnings sent: ${usage.sent}, errors: ${usage.errors}`,
+      );
+    }
   } catch (error) {
     console.error("[jobs] run failed:", error);
   } finally {
@@ -43,5 +57,7 @@ export function startJobScheduler(): void {
   // holding the process open (tests, one-off scripts).
   setTimeout(() => void runJobsOnce(), 5_000).unref?.();
   setInterval(() => void runJobsOnce(), INTERVAL_MS).unref?.();
-  console.log("[jobs] scheduler started (offer expiry + fyrirvari reminders, 60s)");
+  console.log(
+    "[jobs] scheduler started (offer expiry + fyrirvari reminders + plan-usage warnings, 60s)",
+  );
 }

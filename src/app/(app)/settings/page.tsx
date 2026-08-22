@@ -17,6 +17,13 @@ import {
 } from "@/components/ui/table";
 import { requireTenantUser } from "@/lib/auth-guards";
 import { getTenantDb, unscopedDb } from "@/lib/db";
+import { cn } from "@/lib/utils";
+import {
+  CommissionSchemeForm,
+  type SchemeJson,
+} from "@/components/commission-scheme-form";
+import { ACTIVE_STAGES } from "@/verticals/eignir/pipeline";
+import { updateTenantCommissionSchemeAction } from "./actions";
 
 export async function generateMetadata() {
   const t = await getTranslations("settings");
@@ -27,17 +34,31 @@ export default async function SettingsPage() {
   const session = await requireTenantUser();
   const t = await getTranslations("settings");
   const tCommon = await getTranslations("common");
+  const isAdmin = session.user.role === "ADMIN";
+  const db = getTenantDb(session.user.tenantId);
 
   const tenant = await unscopedDb.tenant.findUnique({
     where: { id: session.user.tenantId },
-    select: { name: true, vertical: true, plan: { select: { name: true } } },
+    select: {
+      name: true,
+      vertical: true,
+      commissionScheme: true,
+      plan: { select: { name: true, maxActiveListings: true } },
+    },
   });
   if (!tenant) notFound();
 
-  const users = await getTenantDb(session.user.tenantId).user.findMany({
+  const users = await db.user.findMany({
     orderBy: { name: "asc" },
     select: { id: true, name: true, email: true, role: true, active: true },
   });
+
+  // Plan usage meter (SPEC §12) — ADMINs only.
+  const activeCount = isAdmin
+    ? await db.listing.count({ where: { stage: { in: [...ACTIVE_STAGES] } } })
+    : 0;
+  const limit = tenant.plan.maxActiveListings;
+  const usagePct = limit ? Math.min(100, Math.round((activeCount / limit) * 100)) : null;
 
   return (
     <div className="mx-auto grid max-w-7xl gap-6">
@@ -67,37 +88,96 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
+      {isAdmin ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("usage.title")}</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2">
+            <p className="text-sm">
+              {limit === null
+                ? t("usage.unlimited", { count: activeCount })
+                : t("usage.meter", { count: activeCount, limit })}
+            </p>
+            {usagePct !== null ? (
+              <div
+                role="meter"
+                aria-valuemin={0}
+                aria-valuemax={limit ?? 0}
+                aria-valuenow={activeCount}
+                className="bg-muted h-2.5 w-full max-w-md overflow-hidden rounded-full"
+              >
+                <div
+                  className={cn(
+                    "bg-vertical h-full rounded-full transition-all",
+                    usagePct >= 90 && "bg-amber-500",
+                    usagePct >= 100 && "bg-red-600",
+                  )}
+                  style={{ width: `${usagePct}%` }}
+                />
+              </div>
+            ) : null}
+            {usagePct !== null && usagePct >= 90 ? (
+              <p className="text-sm font-medium text-amber-600">
+                {usagePct >= 100 ? t("usage.atLimit") : t("usage.nearLimit")}
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {isAdmin ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("commissionTitle")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4 text-sm">{t("commissionHint")}</p>
+            <CommissionSchemeForm
+              initialScheme={(tenant.commissionScheme as SchemeJson | null) ?? null}
+              onSave={updateTenantCommissionSchemeAction}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>{t("usersTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("name")}</TableHead>
-                <TableHead>{tCommon("status")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="font-medium">{user.name}</div>
-                    <div className="text-muted-foreground text-xs">
-                      {user.email} ·{" "}
-                      {t(`roles.${user.role}`)}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={user.active ? "secondary" : "outline"}>
-                      {user.active ? tCommon("active") : tCommon("suspended")}
-                    </Badge>
-                  </TableCell>
+          {users.length === 0 ? (
+            <p className="text-muted-foreground py-6 text-center text-sm">
+              {tCommon("noResults")}
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("name")}</TableHead>
+                  <TableHead>{tCommon("status")}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="font-medium">{user.name}</div>
+                      <div className="text-muted-foreground text-xs">
+                        {user.email} ·{" "}
+                        {t(`roles.${user.role}`)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={user.active ? "secondary" : "outline"}>
+                        {user.active ? tCommon("active") : tCommon("suspended")}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

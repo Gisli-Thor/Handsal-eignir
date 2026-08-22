@@ -20,7 +20,11 @@ export default async function TenantAppLayout({
 
   const t = await getTranslations("common");
   const verticalKey = tenant.vertical === "EIGNIR" ? "eignir" : "bilar";
-  const navItems = tenant.vertical === "EIGNIR" ? eignirNav : bilarNav;
+  const allNavItems = tenant.vertical === "EIGNIR" ? eignirNav : bilarNav;
+  // adminOnly items (reports, SPEC §10) are hidden from agents.
+  const navItems = allNavItems.filter(
+    (item) => !item.adminOnly || session.user.role === "ADMIN",
+  );
   // "Handsal Eignir" -> "Eignir" for the logo lockup
   const verticalShortName = t(`verticalName.${tenant.vertical}`).replace(
     /^Handsal\s+/,

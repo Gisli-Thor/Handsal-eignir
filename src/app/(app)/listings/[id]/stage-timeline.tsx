@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Ban, Check, RotateCcw, ShieldAlert } from "lucide-react";
+import { Ban, Check, Gauge, RotateCcw, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,6 +51,7 @@ export function StageTimeline({
     code: string;
   } | null>(null);
   const [overrideReason, setOverrideReason] = useState("");
+  const [limitPromptOpen, setLimitPromptOpen] = useState(false);
 
   const currentIndex = stages.indexOf(currentStage);
 
@@ -59,6 +61,9 @@ export function StageTimeline({
       if (result?.blocked) {
         if (result.blocked.overridable && isAdmin) {
           setOverridePrompt({ to, code: result.blocked.code });
+        } else if (result.blocked.code === "planLimitReached") {
+          // SPEC §12: hard block with a clear upgrade prompt.
+          setLimitPromptOpen(true);
         } else {
           toast.error(t(`guards.${result.blocked.code}`));
         }
@@ -187,6 +192,31 @@ export function StageTimeline({
             >
               {t("withdrawConfirm")}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Plan-limit upgrade prompt (SPEC §12 — hard block, no override) */}
+      <Dialog open={limitPromptOpen} onOpenChange={setLimitPromptOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gauge aria-hidden className="text-vertical size-5" />
+              {t("limit.title")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("limit.body")} {isAdmin ? t("limit.adminHint") : t("limit.agentHint")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setLimitPromptOpen(false)}>
+              {tCommon("cancel")}
+            </Button>
+            {isAdmin ? (
+              <Button asChild>
+                <Link href="/settings">{t("limit.goToSettings")}</Link>
+              </Button>
+            ) : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>

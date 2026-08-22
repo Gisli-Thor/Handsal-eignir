@@ -58,6 +58,10 @@ export const AUDIT_ACTIONS = [
   "SIGNING_REQUEST_CREATED",
   "SIGNING_REQUEST_CANCELLED",
   "SIGNING_EVENT_RECEIVED",
+  // M5 — commission (SPEC §10)
+  "COMMISSION_RECORD_CREATED",
+  "COMMISSION_SCHEME_UPDATED",
+  "AGENT_SPLIT_UPDATED",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

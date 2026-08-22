@@ -27,7 +27,10 @@
     "comingSoon": "Coming soon",
     "yes": "Yes",
     "no": "No",
-    "delete": "Delete"
+    "delete": "Delete",
+    "close": "Close",
+    "retry": "Try again",
+    "backHome": "Back to home"
   },
   "locale": {
     "label": "Language",
@@ -69,6 +72,9 @@
     "title": "Dashboard",
     "welcome": "Welcome to {vertical}",
     "panels": {
+      "pipeline": "Pipeline overview",
+      "portalErrors": "Portal sync errors",
+      "portalErrorsEmpty": "No portal sync errors.",
       "fyrirvarar": "Open fyrirvarar (conditions)",
       "fyrirvararEmpty": "No open fyrirvarar.",
       "expiringOffers": "Offers expiring soon",
@@ -86,6 +92,64 @@
       "OPID_HUS": "Opið hús (open house)"
     }
   },
+  "commission": {
+    "type": "Commission type",
+    "types": {
+      "FIXED_PERCENT": "Fixed percentage",
+      "TIERED": "Tiered",
+      "FLAT_PLUS_PERCENT": "Flat fee + percentage"
+    },
+    "percent": "Percentage (%)",
+    "flat": "Flat fee (ISK)",
+    "tiers": "Tiers",
+    "tierUpto": "Up to and including (ISK)",
+    "tierRest": "On the remainder",
+    "addTier": "Add tier",
+    "lineItems": "Fixed fees",
+    "lineItemLabel": "Fee label",
+    "lineItemAmount": "Amount (ISK)",
+    "lineItemPlaceholder": "e.g. Gagnaöflun (document collection)",
+    "addLineItem": "Add fee",
+    "useTenantDefault": "Use the company's default commission",
+    "savedToast": "Commission scheme saved.",
+    "overrideHint": "A custom commission for this listing. The company default applies otherwise.",
+    "frozen": "Frozen {date}",
+    "salePrice": "Sale price",
+    "gross": "Commission ex VAT",
+    "vsk": "VAT (24%)",
+    "total": "Total incl. VAT",
+    "splits": "Agent split",
+    "errors": {
+      "invalid": "Check the input — percentages and amounts must be valid."
+    }
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "Commission and pipeline (administrators only)",
+    "csv": "CSV",
+    "count": "Count",
+    "gross": "Ex VAT",
+    "vsk": "VAT",
+    "total": "Total",
+    "monthly": {
+      "title": "Earned commission by month",
+      "chartLabel": "Bar chart: commission over the last 12 months",
+      "month": "Month",
+      "empty": "No commission recorded in the last 12 months."
+    },
+    "agents": {
+      "title": "By agent",
+      "agent": "Agent",
+      "sales": "Sales",
+      "earned": "Earned",
+      "empty": "No frozen commission records yet."
+    },
+    "forecast": {
+      "title": "Pipeline forecast",
+      "hint": "Expected commission of listings in stages 3–6, based on the accepted offer or asking price and the applicable scheme.",
+      "stage": "Stage"
+    }
+  },
   "settings": {
     "title": "Settings",
     "tenantInfo": "Company information",
@@ -93,6 +157,15 @@
     "vertical": "Vertical",
     "plan": "Plan",
     "usersTitle": "Users",
+    "usage": {
+      "title": "Plan usage",
+      "meter": "{count} of {limit} active listings",
+      "unlimited": "{count} active listings — the plan is unlimited",
+      "nearLimit": "The plan is over 90% utilization — contact Handsal to upgrade.",
+      "atLimit": "Limit reached — no more listings can go on sale."
+    },
+    "commissionTitle": "Söluþóknun (default commission)",
+    "commissionHint": "The company's default commission scheme. Individual listings can override it.",
     "roles": {
       "ADMIN": "Administrator",
       "AGENT": "Agent",
@@ -215,7 +288,8 @@
       "timeline": "Timeline",
       "soluyfirlit": "Söluyfirlit (sales summary)",
       "signing": "E-signing",
-      "portals": "Portal publishing"
+      "portals": "Portal publishing",
+      "commission": "Söluþóknun (commission)"
     },
     "fields": {
       "gotuheiti": "Street",
@@ -295,7 +369,13 @@
       "add": "Add",
       "remove": "Remove",
       "empty": "No agents assigned.",
-      "primary": "Primary"
+      "primary": "Primary",
+      "splitLabel": "Commission share (%)",
+      "saveSplits": "Save split",
+      "splitHint": "Blank = the primary agent receives the full commission. Set percentages must sum to 100%.",
+      "splitSavedToast": "Commission split saved.",
+      "splitSumNot100": "Set percentages must sum to 100%.",
+      "splitInvalid": "Check the percentage input."
     },
     "loans": {
       "lender": "Lender",
@@ -328,7 +408,15 @@
     "overrideBody": "As an administrator you can advance the listing anyway. Record a reason — it is written to the audit log.",
     "overrideConfirm": "Advance anyway",
     "guards": {
-      "fyrirvararOpen": "Cannot move to Kaupsamningur: fyrirvarar on the accepted offer are still open."
+      "fyrirvararOpen": "Cannot move to Kaupsamningur: fyrirvarar on the accepted offer are still open.",
+      "planLimitReached": "The plan does not allow more active listings."
+    },
+    "limit": {
+      "title": "Plan limit reached",
+      "body": "The subscription plan does not allow more active listings.",
+      "adminHint": "Check the usage in settings and contact Handsal to upgrade the plan.",
+      "agentHint": "Contact your company administrator to upgrade the plan.",
+      "goToSettings": "Open settings"
     }
   },
   "offers": {

@@ -9,6 +9,8 @@ import React from "react";
 import type { TenantDb } from "@/core/tenancy/isolation";
 import { unscopedDb } from "@/lib/db";
 import { getObjectBuffer, putObject } from "@/lib/storage";
+import { describeSchemeIs } from "@/core/commission/describe";
+import { parseScheme } from "@/core/commission/scheme";
 import { formatArea, formatDate, formatISK } from "@/lib/format";
 import { renderPdf } from "@/lib/pdf/render";
 import { propertyAddressLine } from "@/verticals/eignir/display";
@@ -85,8 +87,25 @@ export async function generateSoluyfirlit(
 
   const tenant = await unscopedDb.tenant.findUniqueOrThrow({
     where: { id: tenantId },
-    select: { name: true, address: true, phone: true, email: true, brandColor: true },
+    select: {
+      name: true,
+      address: true,
+      phone: true,
+      email: true,
+      brandColor: true,
+      commissionScheme: true,
+    },
   });
+
+  // Söluþóknun disclosure (SPEC §9/§10): explicit text overrides the
+  // scheme-derived line; the effective scheme = listing override ?? tenant
+  // default (M5).
+  const effectiveScheme = parseScheme(
+    listing.commissionSchemeOverride ?? tenant.commissionScheme,
+  );
+  const soluthoknun =
+    listing.soluthoknunText ??
+    (effectiveScheme ? describeSchemeIs(effectiveScheme) : null);
 
   const coverKey = listing.media.find((m) => m.category === "PHOTO" && m.isCover)?.webKey
     ?? listing.media.find((m) => m.category === "PHOTO")?.webKey;
@@ -168,7 +187,7 @@ export async function generateSoluyfirlit(
         .filter(Boolean)
         .join(", "),
     })),
-    soluthoknun: listing.soluthoknunText,
+    soluthoknun,
     coverJpeg,
     floorPlanJpeg,
   };

@@ -209,6 +209,44 @@ The single most important invariant: **no query crosses a tenant boundary.**
   `xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]` main/sidebar split; list pages
   cap at 1600px/7xl (listings grid gains `2xl:grid-cols-4`).
 
+## Commission, plans & dashboard (M5)
+
+- **Schemes** are zod-validated JSON columns (`Tenant.commissionScheme`
+  default, `Listing.commissionSchemeOverride`) — a polymorphic blob nothing
+  queries relationally; `parseScheme` degrades corrupt data to "no scheme".
+  Shape: FIXED_PERCENT / TIERED (marginal brackets, `uptoISK` inclusive,
+  last tier open-ended) / FLAT_PLUS_PERCENT, plus fixed `lineItems`; BigInt
+  amounts as digit strings, `version: 1` for snapshot longevity.
+- **Calculator** (`src/core/commission/calculate.ts`): pure BigInt — percent
+  → integer basis points (float-drift-proof), floor division, VSK 24% on
+  commission + fees. **Splits**: primary agent gets 100% unless per-listing
+  `ListingAgent.splitPct` percentages are set (must sum to 100; remainder
+  from flooring goes to the primary). Line items excluded from splits.
+- **CommissionRecord** is frozen once by an AFSAL_LOKID pipeline hook
+  (`finalize.ts`, DI seam for the tenant-scheme lookup): sale price =
+  accepted offer amount ?? ásett verð; append-only in the scoped registry;
+  re-entering the stage is a no-op.
+- **Plan limits** (SPEC §12): `createPlanLimitGuard` is registered on ALL
+  five active-band stages (the engine allows any→any jumps) with a free
+  within-band short-circuit; non-overridable — the stage timeline shows an
+  upgrade dialog (ADMIN gets a /settings link). The 90% warning email runs
+  as the third scheduler job (`src/core/plans/usage-warning.ts`) — a job,
+  not a hook, so a superadmin lowering a plan still triggers it; dedup via
+  `Tenant.usageWarnedAt` (stamp-before-send, rollback on failure, cleared
+  under 90%).
+- **Reports** (`/reports`, ADMIN, nav `adminOnly` filter in the (app)
+  layout): aggregations in `src/core/commission/reports.ts` shared with the
+  CSV route (`/reports/csv?report=…` — UTF-8 BOM + semicolons for Icelandic
+  Excel). The forecast runs the real calculator over stages 3–6 with the
+  effective scheme. Chart is hand-rolled divs on the shadcn `--chart-1`
+  token (no chart dependency).
+- **Dashboard** now covers SPEC §13 fully: pipeline overview
+  (`listing.groupBy` counts + ásett-verð sums per stage) and recent portal
+  sync errors (the M4 `[tenantId,status]` index) joined the M3 panels.
+- **Polish** (M5 pass): segment `loading.tsx` for (app) and admin, global
+  `error.tsx`/`not-found.tsx` (translated — they render inside the root
+  layout's NextIntlClientProvider), sr-only close labels via `common.close`.
+
 ## Auth & RBAC
 
 - Auth.js v5, credentials provider (bcryptjs), **JWT sessions** (the supported

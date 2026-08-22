@@ -40,6 +40,8 @@ export const TENANT_SCOPED_MODELS = {
   SigningRequest: {},
   SigningSigner: {},
   SigningEvent: { appendOnly: true },
+  // M5 — commission
+  CommissionRecord: { appendOnly: true },
 } as const satisfies Record<string, { appendOnly?: boolean }>;
 
 export type TenantScopedModel = keyof typeof TENANT_SCOPED_MODELS;

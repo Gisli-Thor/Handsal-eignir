@@ -27,7 +27,10 @@
     "comingSoon": "Væntanlegt",
     "yes": "Já",
     "no": "Nei",
-    "delete": "Eyða"
+    "delete": "Eyða",
+    "close": "Loka",
+    "retry": "Reyna aftur",
+    "backHome": "Á forsíðu"
   },
   "locale": {
     "label": "Tungumál",
@@ -69,6 +72,9 @@
     "title": "Yfirlit",
     "welcome": "Velkomin í {vertical}",
     "panels": {
+      "pipeline": "Sölupípa — yfirlit",
+      "portalErrors": "Villur í vefgáttum",
+      "portalErrorsEmpty": "Engar villur í samstillingu vefgátta.",
       "fyrirvarar": "Opnir fyrirvarar",
       "fyrirvararEmpty": "Engir opnir fyrirvarar.",
       "expiringOffers": "Tilboð að renna út",
@@ -86,6 +92,64 @@
       "OPID_HUS": "Opið hús"
     }
   },
+  "commission": {
+    "type": "Tegund þóknunar",
+    "types": {
+      "FIXED_PERCENT": "Föst prósenta",
+      "TIERED": "Þrepaskipt",
+      "FLAT_PLUS_PERCENT": "Föst fjárhæð + prósenta"
+    },
+    "percent": "Prósenta (%)",
+    "flat": "Föst fjárhæð (kr.)",
+    "tiers": "Þrep",
+    "tierUpto": "Að og með (kr.)",
+    "tierRest": "Af því sem umfram er",
+    "addTier": "Bæta við þrepi",
+    "lineItems": "Föst gjöld",
+    "lineItemLabel": "Heiti gjalds",
+    "lineItemAmount": "Fjárhæð (kr.)",
+    "lineItemPlaceholder": "t.d. Gagnaöflun",
+    "addLineItem": "Bæta við gjaldi",
+    "useTenantDefault": "Nota sjálfgefna söluþóknun fyrirtækisins",
+    "savedToast": "Söluþóknun vistuð.",
+    "overrideHint": "Sérstök söluþóknun fyrir þessa eign. Sjálfgefin þóknun fyrirtækisins gildir annars.",
+    "frozen": "Fryst {date}",
+    "salePrice": "Söluverð",
+    "gross": "Þóknun án vsk.",
+    "vsk": "Vsk. (24%)",
+    "total": "Samtals með vsk.",
+    "splits": "Skipting milli sölumanna",
+    "errors": {
+      "invalid": "Athugaðu innslátt — prósentur og fjárhæðir þurfa að vera gildar."
+    }
+  },
+  "reports": {
+    "title": "Skýrslur",
+    "subtitle": "Söluþóknun og sölupípa (aðeins stjórnendur)",
+    "csv": "CSV",
+    "count": "Fjöldi",
+    "gross": "Án vsk.",
+    "vsk": "Vsk.",
+    "total": "Samtals",
+    "monthly": {
+      "title": "Innunnin söluþóknun eftir mánuðum",
+      "chartLabel": "Súlurit: söluþóknun síðustu 12 mánuði",
+      "month": "Mánuður",
+      "empty": "Engin söluþóknun skráð síðustu 12 mánuði."
+    },
+    "agents": {
+      "title": "Eftir sölumönnum",
+      "agent": "Sölumaður",
+      "sales": "Sölur",
+      "earned": "Innunnið",
+      "empty": "Engar frystar þóknanir ennþá."
+    },
+    "forecast": {
+      "title": "Spá úr sölupípu",
+      "hint": "Vænt þóknun eigna í stigum 3–6, miðað við samþykkt tilboð eða ásett verð og gildandi þóknun.",
+      "stage": "Staða"
+    }
+  },
   "settings": {
     "title": "Stillingar",
     "tenantInfo": "Upplýsingar um fyrirtæki",
@@ -93,6 +157,15 @@
     "vertical": "Svið",
     "plan": "Áskriftarleið",
     "usersTitle": "Notendur",
+    "usage": {
+      "title": "Nýting áskriftar",
+      "meter": "{count} af {limit} virkum eignum",
+      "unlimited": "{count} virkar eignir — áskriftin er ótakmörkuð",
+      "nearLimit": "Áskriftin er komin yfir 90% nýtingu — hafðu samband við Handsal til að uppfæra.",
+      "atLimit": "Hámarki náð — ekki er hægt að setja fleiri eignir í sölu."
+    },
+    "commissionTitle": "Söluþóknun (sjálfgefin)",
+    "commissionHint": "Sjálfgefin söluþóknun fyrirtækisins. Hægt er að víkja frá henni á hverri eign fyrir sig.",
     "roles": {
       "ADMIN": "Stjórnandi",
       "AGENT": "Sölumaður",
@@ -215,7 +288,8 @@
       "timeline": "Atburðasaga",
       "soluyfirlit": "Söluyfirlit",
       "signing": "Rafræn undirritun",
-      "portals": "Birting á vefgáttum"
+      "portals": "Birting á vefgáttum",
+      "commission": "Söluþóknun"
     },
     "fields": {
       "gotuheiti": "Götuheiti",
@@ -295,7 +369,13 @@
       "add": "Bæta við",
       "remove": "Fjarlægja",
       "empty": "Engir sölumenn skráðir.",
-      "primary": "Aðalábyrgð"
+      "primary": "Aðalábyrgð",
+      "splitLabel": "Hlutur af söluþóknun (%)",
+      "saveSplits": "Vista skiptingu",
+      "splitHint": "Tómt = aðalábyrgðaraðili fær alla þóknun. Skráð hlutföll þurfa að vera samtals 100%.",
+      "splitSavedToast": "Skipting þóknunar vistuð.",
+      "splitSumNot100": "Skráð hlutföll þurfa að vera samtals 100%.",
+      "splitInvalid": "Athugaðu innslátt hlutfalla."
     },
     "loans": {
       "lender": "Lánveitandi",
@@ -328,7 +408,15 @@
     "overrideBody": "Sem stjórnandi getur þú fært eignina áfram þrátt fyrir það. Skráðu ástæðu — hún er vistuð í aðgerðaskrá.",
     "overrideConfirm": "Færa samt",
     "guards": {
-      "fyrirvararOpen": "Ekki er hægt að færa í Kaupsamning: fyrirvarar á samþykktu tilboði eru enn opnir."
+      "fyrirvararOpen": "Ekki er hægt að færa í Kaupsamning: fyrirvarar á samþykktu tilboði eru enn opnir.",
+      "planLimitReached": "Áskriftin leyfir ekki fleiri virkar eignir."
+    },
+    "limit": {
+      "title": "Hámarki áskriftar náð",
+      "body": "Áskriftarleiðin leyfir ekki fleiri virkar eignir í sölu.",
+      "adminHint": "Skoðaðu nýtinguna í stillingum og hafðu samband við Handsal til að uppfæra áskriftina.",
+      "agentHint": "Hafðu samband við stjórnanda fyrirtækisins til að uppfæra áskriftina.",
+      "goToSettings": "Opna stillingar"
     }
   },
   "offers": {

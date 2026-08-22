@@ -4,9 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { UserPlus, X } from "lucide-react";
+import { Percent, UserPlus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -15,12 +16,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { addListingAgentAction, removeListingAgentAction } from "../actions";
+import { updateAgentSplitsAction } from "../commission-actions";
 
 export interface AgentLinkItem {
   id: string;
   userId: string;
   name: string;
   isPrimary: boolean;
+  /** Commission split % (SPEC §10); null = default (primary gets 100%). */
+  splitPct: number | null;
 }
 
 export function AgentsPanel({
@@ -28,17 +32,27 @@ export function AgentsPanel({
   links,
   availableUsers,
   canManage,
+  isAdmin,
 }: {
   listingId: string;
   links: AgentLinkItem[];
   availableUsers: { id: string; name: string }[];
   canManage: boolean;
+  isAdmin: boolean;
 }) {
   const t = useTranslations("listings.agents");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const [userId, setUserId] = useState("");
   const [pending, startTransition] = useTransition();
+  const [splitDraft, setSplitDraft] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      links.map((link) => [
+        link.id,
+        link.splitPct === null ? "" : String(link.splitPct).replace(".", ","),
+      ]),
+    ),
+  );
 
   const assignedIds = new Set(links.map((link) => link.userId));
   const selectable = availableUsers.filter((user) => !assignedIds.has(user.id));
@@ -59,6 +73,28 @@ export function AgentsPanel({
       router.refresh();
     });
   }
+
+  function saveSplits() {
+    const splits = links.map((link) => {
+      const raw = (splitDraft[link.id] ?? "").trim().replace(",", ".");
+      return { linkId: link.id, pct: raw === "" ? null : Number(raw) };
+    });
+    if (splits.some((split) => split.pct !== null && !Number.isFinite(split.pct))) {
+      toast.error(t("splitInvalid"));
+      return;
+    }
+    startTransition(async () => {
+      const result = await updateAgentSplitsAction(listingId, splits);
+      if (result?.error) {
+        toast.error(result.error === "sumNot100" ? t("splitSumNot100") : tCommon("errorOccurred"));
+      } else {
+        toast.success(t("splitSavedToast"));
+      }
+      router.refresh();
+    });
+  }
+
+  const showSplits = isAdmin && links.length > 1;
 
   return (
     <div className="grid gap-4">
@@ -100,22 +136,49 @@ export function AgentsPanel({
                   <Badge variant="secondary">{t("primary")}</Badge>
                 ) : null}
               </div>
-              {canManage ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemove(link.id)}
-                  disabled={pending || links.length === 1}
-                  title={t("remove")}
-                >
-                  <X aria-hidden className="size-4" />
-                </Button>
-              ) : null}
+              <div className="flex items-center gap-2">
+                {showSplits ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      inputMode="decimal"
+                      className="h-8 w-16 text-right"
+                      placeholder={link.isPrimary ? "100" : "0"}
+                      aria-label={t("splitLabel")}
+                      value={splitDraft[link.id] ?? ""}
+                      onChange={(event) =>
+                        setSplitDraft((draft) => ({ ...draft, [link.id]: event.target.value }))
+                      }
+                    />
+                    <span className="text-muted-foreground text-xs">%</span>
+                  </div>
+                ) : null}
+                {canManage ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemove(link.id)}
+                    disabled={pending || links.length === 1}
+                    title={t("remove")}
+                  >
+                    <X aria-hidden className="size-4" />
+                  </Button>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>
       )}
+
+      {showSplits ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="outline" size="sm" disabled={pending} onClick={saveSplits}>
+            <Percent aria-hidden className="size-4" />
+            {t("saveSplits")}
+          </Button>
+          <p className="text-muted-foreground text-xs">{t("splitHint")}</p>
+        </div>
+      ) : null}
     </div>
   );
 }
